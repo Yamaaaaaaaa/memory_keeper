@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Button, StyleSheet, TouchableOpacity, Text, Alert, Image, TextInput } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { screenRatio } from '@/utils/initScreen';
-import { signOut } from 'firebase/auth';
 import { auth, db, storage } from '@/firebase/firebaseConfig';
+import { screenRatio } from '@/utils/initScreen';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { signOut, updatePassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
 
 export default function ProfileScreen() {
     const [imageUri, setImageUri] = useState<string | null>(null);
@@ -182,7 +183,14 @@ export default function ProfileScreen() {
 
     const handleSave = async () => {
         try {
-            const uid = auth.currentUser?.uid;
+            const user = auth.currentUser;
+            const uid = user?.uid;
+            if (!user) {
+                Alert.alert("Error", "Failed to get User Signing");
+                return;
+            }
+
+
             if (!uid) {
                 Alert.alert("Error", "User not found");
                 return;
@@ -201,7 +209,23 @@ export default function ProfileScreen() {
             };
 
             await setDoc(userRef, updateData, { merge: true });
-            Alert.alert("Success", "Your information has been updated!");
+            // Nếu có yêu cầu đổi mật khẩu
+            if (newPassword) {
+                try {
+                    await updatePassword(user, newPassword);
+                    Alert.alert("Success", "Your information and password have been updated!");
+                } catch (err: any) {
+                    console.error("Password update failed:", err);
+                    if (err.code === "auth/requires-recent-login") {
+                        Alert.alert("Please re-login", "For security reasons, please sign out and sign in again before changing your password.");
+                    } else {
+                        Alert.alert("Error", "Failed to update password. Please try again.");
+                    }
+                    return;
+                }
+            } else {
+                Alert.alert("Success", "Your information has been updated!");
+            }
         } catch (error) {
             console.error("Error saving information:", error);
             Alert.alert("Error", "An error occurred while saving your information.");
