@@ -63,11 +63,11 @@ export default function ProfileScreen() {
                 });
 
                 const fileName = `${uid}_${Date.now()}.jpg`;
-                const imageRef = ref(storage, fileName);
+                const storageRef = ref(storage, `profile-image/${uid}_${Date.now()}.jpg`);
 
-                console.log("Storage reference:", imageRef.fullPath);
+                console.log("Storage reference:", storageRef.fullPath);
 
-                const uploadTask = uploadBytesResumable(imageRef, blob);
+                const uploadTask = uploadBytesResumable(storageRef, blob);
 
                 uploadTask.on('state_changed',
                     (snapshot) => {
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.3,
+                quality: 0.1,
             });
 
             if (!result.canceled && result.assets.length > 0) {

@@ -1,10 +1,11 @@
-import { View, StyleSheet, Text, TextInput, FlatList, Image, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebaseConfig';
-import { screenRatio } from '@/utils/initScreen';
 import { useTrackedRouter } from '@/hooks/useTrackedRouter';
+import { screenRatio } from '@/utils/initScreen';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
+import { doc, getDoc } from 'firebase/firestore';
+import React, { useState } from 'react';
+import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Friend {
     uid: string;
@@ -17,7 +18,7 @@ export default function FriendListScreen() {
     const [friends, setFriends] = useState<Friend[]>([]);
     const [searchText, setSearchText] = useState<string>('');
     const router = useTrackedRouter();
-    useEffect(() => {
+    useFocusEffect(() => {
         const fetchFriends = async () => {
             const user = auth.currentUser;
             if (!user) return;
@@ -47,7 +48,7 @@ export default function FriendListScreen() {
         };
 
         fetchFriends();
-    }, []);
+    });
 
     const filteredFriends = friends.filter((friend) =>
         friend.name.toLowerCase().includes(searchText.toLowerCase())
