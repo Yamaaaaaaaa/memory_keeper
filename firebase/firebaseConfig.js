@@ -1,10 +1,9 @@
-import { initializeApp } from 'firebase/app';
-import { getReactNativePersistence, initializeAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from "firebase/app";
+import { getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Optionally import the services that you want to use
 // import {...} from 'firebase/auth';
@@ -14,20 +13,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // import {...} from 'firebase/storage';
 
 // Initialize Firebase
+// const firebaseConfig = {
+//     // databaseURL: 'https://project-id.firebaseio.com',
+//     apiKey: "AIzaSyCc3kdzQq8dOEC6yuulzC5ix46q13K_1rI",
+//     authDomain: "black-function-454609-h3.firebaseapp.com",
+//     projectId: "black-function-454609-h3",
+//     storageBucket: "black-function-454609-h3.appspot.com", // ✅ Sửa lỗi domain
+//     messagingSenderId: "446696233819",
+//     appId: "1:446696233819:web:2c0b64eb701c207c49187e",
+//     measurementId: "G-6VG89EERMH",
+// };
+
 const firebaseConfig = {
-    // databaseURL: 'https://project-id.firebaseio.com',
-    apiKey: "AIzaSyCc3kdzQq8dOEC6yuulzC5ix46q13K_1rI",
-    authDomain: "black-function-454609-h3.firebaseapp.com",
-    projectId: "black-function-454609-h3",
-    storageBucket: "black-function-454609-h3.appspot.com", // ✅ Sửa lỗi domain
-    messagingSenderId: "446696233819",
-    appId: "1:446696233819:web:2c0b64eb701c207c49187e",
-    measurementId: "G-6VG89EERMH",
+  apiKey: "AIzaSyDJ0fyjV_T4ieudBsv3mfeQ8CXxGcQWY08",
+  authDomain: "memkeep-demo.firebaseapp.com",
+  projectId: "memkeep-demo",
+  storageBucket: "memkeep-demo.firebasestorage.app",
+  messagingSenderId: "856396630599",
+  appId: "1:856396630599:web:60e951c05c55ccf4373f62",
+  measurementId: "G-7HT8RCRMKF",
 };
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app); // 👈 Thêm dòng này
 export const storage = getStorage(app);
 
 export const auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
+  persistence: getReactNativePersistence(AsyncStorage),
 });

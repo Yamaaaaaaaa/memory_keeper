@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSContactsUsageDescription": "This app needs access to your contacts to display them."  // ← mô tả yêu cầu
+        "NSContactsUsageDescription": "This app needs access to your contacts to display them." // ← mô tả yêu cầu
       }
     },
     "android": {
@@ -20,7 +20,15 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "READ_CONTACTS"  // ← cho phép đọc danh bạ
+        "READ_CONTACTS", // ← cho phép đọc danh bạ,
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
       ],
       "edgeToEdgeEnabled": true,
       "package": "com.kaita2k4.memkeeper"
@@ -39,14 +47,15 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        } 
+        }
       ],
       [
         "expo-contacts",
         {
           "contactsPermission": "Allow $(PRODUCT_NAME) to access your contacts." // Nếu muốn tự ta set cái thông điệp của popup xin cấp quyền thì mới config cái này
         }
-      ]
+      ],
+      "@config-plugins/react-native-webrtc"
     ],
     "experiments": {
       "typedRoutes": true

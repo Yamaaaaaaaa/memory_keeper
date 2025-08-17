@@ -1,8 +1,8 @@
-import { router, Tabs } from "expo-router";
-import { useEffect } from 'react';
 import { auth } from "@/firebase/firebaseConfig";
+import { router, Tabs } from "expo-router";
 import { onAuthStateChanged } from 'firebase/auth';
-import React from "react";
+import React, { useEffect } from 'react';
+
 
 
 export default function TabsLayout() {
@@ -44,6 +44,11 @@ export default function TabsLayout() {
             }} />
             <Tabs.Screen name="invite_contact" options={{
                 headerTitle: "Invite Contacts",
+                headerShown: false,
+                tabBarStyle: { display: 'none' }, // Ẩn toàn bộ tab bar khi ở tab này
+            }} />
+            <Tabs.Screen name="call_screen" options={{
+                headerTitle: "CallScreen",
                 headerShown: false,
                 tabBarStyle: { display: 'none' }, // Ẩn toàn bộ tab bar khi ở tab này
             }} />

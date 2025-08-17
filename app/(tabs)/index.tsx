@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { screenRatio } from '@/utils/initScreen';
 import { auth, db } from '@/firebase/firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
 import { useTrackedRouter } from '@/hooks/useTrackedRouter';
+import { screenRatio } from '@/utils/initScreen';
+import { LinearGradient } from 'expo-linear-gradient';
+import { doc, getDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 export default function HomeScreen() {
     const [userName, setUserName] = useState('');
     const router = useTrackedRouter()
@@ -58,6 +58,12 @@ export default function HomeScreen() {
                             Profile
                         </Text>
                         <Image style={styles.navIcon} source={require("../../assets/images/NewUI/user-square.png")}></Image>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/call_screen")}>
+                        <Text style={styles.navIxt}>
+                            Call Screen DEMO
+                        </Text>
+                        <Image style={styles.navIcon} source={require("../../assets/images/NewUI/book.png")}></Image>
                     </TouchableOpacity>
                 </View>
             </View>
