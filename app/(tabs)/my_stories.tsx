@@ -1,19 +1,20 @@
+import { auth, db } from "@/firebase/firebaseConfig"
+import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { screenRatio } from "@/utils/initScreen"
+import { LinearGradient } from "expo-linear-gradient"
+import { collection, deleteDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore"
 import React, { useEffect, useState } from "react"
 import {
-    View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
-    ScrollView,
     TouchableOpacity,
-    ActivityIndicator,
-    RefreshControl,
-    Image,
+    View,
 } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { screenRatio } from "@/utils/initScreen"
-import { auth, db } from "@/firebase/firebaseConfig"
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore"
-import { useTrackedRouter } from "@/hooks/useTrackedRouter"
 
 // Simplified Story interface - chỉ các trường cần thiết
 interface Story {
@@ -21,6 +22,7 @@ interface Story {
     title: string
     processing: number
     ownerId: string
+    conversation_id?: string
 }
 
 export default function MyStoriesScreen() {
@@ -107,6 +109,7 @@ export default function MyStoriesScreen() {
                     title: data.title || "Untitled Story",
                     processing: data.processing || 0,
                     ownerId: data.ownerId || "",
+                    conversation_id: data.conversation_id || undefined,
                 }
 
                 console.log("Mapped story:", story)
@@ -148,6 +151,25 @@ export default function MyStoriesScreen() {
     const handleEditProfile = () => {
         console.log("Edit profile")
         // Navigate to profile edit
+    }
+
+    const handleDeleteStory = async (story: Story) => {
+        try {
+            // Delete story document
+            await deleteDoc(doc(db, "stories", story.id))
+
+            // Delete related conversation if it exists
+            if (story.conversation_id) {
+                await deleteDoc(doc(db, "conversations", story.conversation_id))
+            }
+
+            // Update UI
+            setStories((prev) => prev.filter((s) => s.id !== story.id))
+            Alert.alert("Success", "Story and related conversation deleted")
+        } catch (err) {
+            console.error("Error deleting story:", err)
+            Alert.alert("Error", "Failed to delete story")
+        }
     }
 
     useEffect(() => {
@@ -201,6 +223,16 @@ export default function MyStoriesScreen() {
                                     key={story.id}
                                     style={[styles.storyCard, getCardBorderStyle(story.processing)]}
                                     onPress={() => handleStoryPress(story)}
+                                    onLongPress={() =>
+                                        Alert.alert(
+                                            "Delete story",
+                                            `Are you sure you want to delete "${story.title}"?`,
+                                            [
+                                                { text: "Cancel", style: "cancel" },
+                                                { text: "Delete", style: "destructive", onPress: () => handleDeleteStory(story) },
+                                            ]
+                                        )
+                                    }
                                     activeOpacity={0.8}
                                 >
                                     {/* Progress Bar */}
