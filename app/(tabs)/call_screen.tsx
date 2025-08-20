@@ -1,6 +1,7 @@
 // 4. CallScreen.tsx - Màn hình call với đầy đủ tính năng
 import { useCall } from '@/contexts/CallContext';
 import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RTCView } from 'react-native-webrtc';
@@ -31,7 +32,7 @@ const CallScreen: React.FC = () => {
 
     const handleEndCall = async () => {
         await endCall();
-        navigation.goBack();
+        router.push("/(tabs)")
     };
 
     return (

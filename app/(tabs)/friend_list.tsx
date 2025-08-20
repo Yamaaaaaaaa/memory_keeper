@@ -1,11 +1,13 @@
+import { useCall } from '@/contexts/CallContext';
 import { auth, db } from '@/firebase/firebaseConfig';
 import { useTrackedRouter } from '@/hooks/useTrackedRouter';
 import { screenRatio } from '@/utils/initScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
-import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
+    Alert,
     FlatList,
     Image,
     StyleSheet,
@@ -25,6 +27,7 @@ export default function FriendListScreen() {
     const [friends, setFriends] = useState<Friend[]>([]);
     const [searchText, setSearchText] = useState<string>('');
     const router = useTrackedRouter();
+    const { startCall, hasCam, hasMic } = useCall();
 
     useFocusEffect(() => {
         const fetchFriends = async () => {
@@ -63,27 +66,19 @@ export default function FriendListScreen() {
     );
 
     const handleCall = async (friend: Friend) => {
-        const caller = auth.currentUser;
-        if (!caller) return;
+        if (!hasCam || !hasMic) {
+            Alert.alert('Lỗi', 'Cần cấp quyền camera và microphone');
+            return;
+        }
 
-        // tạo document call trong Firestore
-        const callRef = await addDoc(collection(db, "calls"), {
-            callerId: caller.uid,
-            calleeId: friend.uid,
-            status: "ringing",
-            createdAt: serverTimestamp(),
-        });
-
-        // chuyển sang CallScreen với role = caller
-        router.push({
-            pathname: "/(tabs)/call_screen",
-            params: {
-                callId: callRef.id,
-                callerId: caller.uid,
-                calleeId: friend.uid,
-                isCaller: "true", // 👈 truyền string vì params dạng string
-            },
-        });
+        try {
+            await startCall(friend.uid.trim());
+            // Navigate to call screen
+            router.push('/(tabs)/call_screen');
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+            Alert.alert('Lỗi', 'Không thể thực hiện cuộc gọi');
+        }
     };
 
     return (
@@ -120,7 +115,15 @@ export default function FriendListScreen() {
                         contentContainerStyle={styles.grid}
                         renderItem={({ item }) => (
                             <TouchableOpacity style={styles.friendItem} onPress={() => handleCall(item)}>
-                                <Image source={{ uri: item.profilePicture }} style={styles.avatar} />
+                                {item.profilePicture ? (
+                                    <Image source={{ uri: item.profilePicture }} style={styles.avatar} />
+                                ) : (
+                                    <View style={[styles.avatar, styles.avatarFallback]}>
+                                        <Text style={styles.avatarText}>
+                                            {item.name.charAt(0).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                )}
                                 <Text style={styles.name}>{item.name}</Text>
                             </TouchableOpacity>
                         )}
@@ -192,5 +195,15 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.3,
         shadowRadius: 5,
+    },
+    avatarFallback: {
+        backgroundColor: "#CCC", // màu nền cho avatar fallback
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    avatarText: {
+        fontSize: screenRatio >= 2 ? 38 : 30,
+        fontFamily: "Alberts",
+        color: "#fff", // màu chữ
     },
 });

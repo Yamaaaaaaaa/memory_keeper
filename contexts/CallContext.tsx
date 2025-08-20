@@ -2,6 +2,7 @@
 import { auth, db } from '@/firebase/firebaseConfig';
 import { Audio } from 'expo-av';
 import { Camera } from 'expo-camera';
+import { router } from 'expo-router';
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
@@ -47,7 +48,32 @@ interface CallContextValue {
 const CallContext = createContext<CallContextValue | null>(null);
 
 const rtcConfig = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        {
+            urls: [
+                "turn:turn.anyfirewall.com:443?transport=tcp",
+                "turn:turn.anyfirewall.com:443?transport=udp"
+            ],
+            username: "webrtc",
+            credential: "webrtc"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        }
+    ],
 };
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -182,10 +208,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const startCall = async (peerId: string) => {
         console.log("peerId", peerId);
 
-        if (!myUserId || !peerId) {
-            Alert.alert('Thiếu thông tin', 'Hãy nhập peerId');
-            return;
-        }
+        // if (!myUserId || !peerId) {
+        //     Alert.alert('Thiếu thông tin', 'Hãy nhập peerId');
+        //     return;
+        // }
 
         await startLocalStream();
         const pc = createPeerConnection();
@@ -367,6 +393,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 Alert.alert('Cuộc gọi đã kết thúc');
                 cleanup();
             }
+        });
+        // Điều hướng sang màn hình CallScreen sau khi accept thành công
+        router.push({
+            pathname: "/(tabs)/call_screen",
         });
     };
 
