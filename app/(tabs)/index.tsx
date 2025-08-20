@@ -65,6 +65,12 @@ export default function HomeScreen() {
                         </Text>
                         <Image style={styles.navIcon} source={require("../../assets/images/NewUI/book.png")}></Image>
                     </TouchableOpacity>
+                    <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/home_call_screen")}>
+                        <Text style={styles.navIxt}>
+                            Home Call Screen DEMO
+                        </Text>
+                        <Image style={styles.navIcon} source={require("../../assets/images/NewUI/book.png")}></Image>
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>

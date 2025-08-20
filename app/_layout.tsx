@@ -1,10 +1,10 @@
-import React from "react";
-import { View, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Stack, usePathname } from "expo-router";
+import { useTrackedRouter } from "@/hooks/useTrackedRouter";
 import { useNavigationStore } from "@/store/navigationStore";
 import { useFonts } from "expo-font";
-import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { Stack, usePathname } from "expo-router";
+import React from "react";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function StepCreateStoriesLayout() {
 
@@ -30,12 +30,12 @@ export default function StepCreateStoriesLayout() {
   } = useNavigationStore();
 
   const canGoBack = backStack.length > 0;
-  console.log('====================================');
-  console.log("pathname", pathname);
-  console.log("canGoBack", canGoBack);
-  console.log("backStack", backStack);
-  console.log("insets", insets);
-  console.log('====================================');
+  // console.log('====================================');
+  // console.log("pathname", pathname);
+  // console.log("canGoBack", canGoBack);
+  // console.log("backStack", backStack);
+  // console.log("insets", insets);
+  // console.log('====================================');
   const goBack = () => {
     if (!canGoBack) return;
 
