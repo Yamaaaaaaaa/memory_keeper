@@ -88,6 +88,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [speakerOn, setSpeakerOn] = useState(false);
     const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
 
+    const recordingRef = useRef<Audio.Recording | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordedUri, setRecordedUri] = useState<string | null>(null);
+
     const pcRef = useRef<RTCPeerConnection | null>(null);
     const localStreamRef = useRef<any>(null);
     const callDocRef = useRef<ReturnType<typeof doc> | null>(null);
@@ -164,6 +168,100 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, [myUserId]);
 
+
+    const startRecording = async () => {
+        try {
+            const perm = await Audio.requestPermissionsAsync();
+            if (perm.status !== "granted") {
+                Alert.alert("Không có quyền microphone để ghi âm");
+                return;
+            }
+
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+            });
+
+            const { recording } = await Audio.Recording.createAsync(
+                Audio.RecordingOptionsPresets.HIGH_QUALITY
+            );
+
+            recordingRef.current = recording;
+            setIsRecording(true);
+            console.log("Recording started");
+        } catch (e) {
+            console.error("Start recording error:", e);
+        }
+    };
+
+    const stopRecording = async (docRef?: ReturnType<typeof doc> | null) => {
+        if (!recordingRef.current) return null;
+
+        try {
+            await recordingRef.current.stopAndUnloadAsync();
+            const uri = recordingRef.current.getURI();
+            recordingRef.current = null;
+            setIsRecording(false);
+
+            const formData = new FormData();
+            formData.append("file", {
+                uri,
+                type: "audio/m4a",
+                name: "recording.m4a",
+            } as any);
+            formData.append("model", "whisper-1");
+
+            const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${process.env.EXPO_PUBLIC_API_KEY}`,
+                },
+                body: formData,
+            });
+
+            const data = await res.json();
+            if (data.error) {
+                console.error("❌ Whisper API Error:", data.error);
+                return null;
+            }
+
+            const transcript = data.text;
+            console.log("📝 Transcript:", transcript);
+
+            if (docRef) {
+                try {
+                    const snap = await getDoc(docRef);
+                    if (snap.exists()) {
+                        const callData: any = snap.data();
+                        const updateField: Record<string, any> = {};
+
+                        if (myUserId === callData.callerId) {
+                            updateField.callDetailText_Caller = transcript;
+                        } else if (myUserId === callData.calleeId) {
+                            updateField.callDetailText_Callee = transcript;
+                        }
+
+                        if (Object.keys(updateField).length > 0) {
+                            await updateDoc(docRef, updateField);
+                            console.log("✅ Transcript saved to Firestore", updateField);
+                        } else {
+                            console.warn("⚠️ User không khớp caller/callee, không lưu transcript");
+                        }
+                    }
+                } catch (err) {
+                    console.error("❌ Failed to save transcript:", err);
+                }
+            } else {
+                console.warn("⚠️ No callDocRef provided, cannot save transcript");
+            }
+
+            return transcript;
+        } catch (e) {
+            console.error("❌ Stop recording error:", e);
+            return null;
+        }
+    };
+
     const startLocalStream = async (facing: 'user' | 'environment' = cameraFacing) => {
         if (localStreamRef.current) return;
         try {
@@ -214,6 +312,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // }
 
         await startLocalStream();
+        await startRecording(); // bắt đầu record
         const pc = createPeerConnection();
 
         const callDoc = doc(collection(db, 'calls'));
@@ -318,6 +417,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!incomingCall) return;
 
         await startLocalStream();
+        await startRecording(); //bắt đầu record
         const pc = createPeerConnection();
         const callDoc = doc(db, 'calls', incomingCall.callId);
         callDocRef.current = callDoc;
@@ -463,15 +563,27 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const endCall = async () => {
-        if (callDocRef.current) {
+        let transcript: string | null = null;
+
+        const docRef = callDocRef.current;
+        if (docRef) {
             try {
-                await updateDoc(callDocRef.current, {
+                await updateDoc(docRef, {
                     status: 'ended' as CallStatus,
                     endedAt: serverTimestamp()
                 });
-            } catch { }
+            } catch (err) {
+                console.warn("endCall update error:", err);
+            }
         }
+
+        transcript = await stopRecording(docRef);
+
         await cleanup();
+
+        if (transcript) {
+            console.log("📌 Transcript saved:", transcript);
+        }
     };
 
     const cleanup = async () => {
