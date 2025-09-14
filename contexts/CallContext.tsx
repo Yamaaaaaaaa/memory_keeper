@@ -1,5 +1,6 @@
 // 1. CallContext.tsx - Context để quản lý trạng thái call
 import { auth, db } from '@/firebase/firebaseConfig';
+import { useCallStoryStore } from '@/store/callStoryStore';
 import { Audio } from 'expo-av';
 import { Camera } from 'expo-camera';
 import { router } from 'expo-router';
@@ -105,6 +106,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const myUserId = auth.currentUser?.uid || '';
 
+    const { hasStory, setId } = useCallStoryStore();
     // Request permissions
     useEffect(() => {
         (async () => {
@@ -346,7 +348,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Create story
         try {
-            await addDoc(collection(db, 'stories'), {
+            const storyRef = await addDoc(collection(db, 'stories'), {
                 callId: callDoc.id,
                 ownerId: myUserId,
                 related_users: [myUserId, peerId],
@@ -359,6 +361,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 typeContact: 'call',
                 processing: 0,
             });
+            // Sau khi thêm doc thành công
+            if (hasStory) {
+                setId(storyRef.id); // lưu id của stories vừa tạo vào Zustand
+            }
         } catch (e) {
             console.warn('create story error', e);
         }

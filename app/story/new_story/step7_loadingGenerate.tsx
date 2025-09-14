@@ -1,12 +1,13 @@
 "use client"
-import React, { useEffect, useState } from "react"
-import { View, StyleSheet, Text, Animated, Image, Alert } from "react-native"
+import { auth, db } from "@/firebase/firebaseConfig"
+import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { useCallStoryStore } from "@/store/callStoryStore"
+import axios from "axios"
 import { LinearGradient } from "expo-linear-gradient"
 import { useLocalSearchParams } from "expo-router"
-import axios from "axios"
-import { auth, db } from "@/firebase/firebaseConfig"
-import { collection, addDoc } from "firebase/firestore"
-import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { addDoc, collection, doc, getDoc, updateDoc } from "firebase/firestore"
+import React, { useEffect, useState } from "react"
+import { Alert, Animated, Image, StyleSheet, Text, View } from "react-native"
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_API_KEY;
 
 
@@ -17,57 +18,113 @@ export default function Step7_Loading() {
     const [statusText, setStatusText] = useState("Preparing your story...")
     const currentUserId = auth.currentUser?.uid
     const router = useTrackedRouter()
+    const {
+        id: existingStoryId,
+        hasStory,
+        initialQuestion,
+        clearAll,
+    } = useCallStoryStore()
 
     useEffect(() => {
         generateAndSaveStory()
     }, [])
 
     const generateAndSaveStory = async () => {
+        console.log("Step7_Loading_ hasStory", hasStory)
+        console.log("Step7_Loading existingStoryId", existingStoryId)
+        console.log("Step7_Loading initialQuestion", initialQuestion)
+
         try {
-            // Step 1: Parse data
-            setStatusText("Analyzing your conversation...")
-            updateProgress(0.1)
-            const finalQA = params.finalQA ? JSON.parse(params.finalQA as string) : []
-            const allMessages = params.allMessages ? JSON.parse(params.allMessages as string) : []
-            const storyTitle = (params.storyTitle as string) || "Untitled Story"
-            const shareType = (params.shareType as string) || "myself"
+            if (hasStory && existingStoryId) {
+                // ========== CASE 2 ==========
+                setStatusText("Fetching existing story...")
+                updateProgress(0.3)
+                const storyRef = doc(db, "stories", existingStoryId)
+                const storyDoc = await getDoc(storyRef)
+                if (!storyDoc.exists()) {
+                    throw new Error("Story not found")
+                }
 
+                const storyData = storyDoc.data()
+                console.log("✅ Story from Firebase:", storyData)
 
-            // Step 2: Generate story content with OpenAI
-            setStatusText("Creating your detailed story...")
-            updateProgress(0.3)
-            const storyContent = await generateStoryContent(finalQA, storyTitle)
+                if (storyData.callId) {
+                    const callDoc = await getDoc(doc(db, "calls", storyData.callId))
+                    if (callDoc.exists()) {
+                        const callData = callDoc.data()
+                        console.log("👤 Caller text:", callData.callDetailText_Caller)
+                        console.log("👥 Callee text:", callData.callDetailText_Callee)
+                        const prevQA = initialQuestion.previousQA || []
+                        const storyTitle = storyData.title || "Untitled Story"
+                        setStatusText("Generating detailed story...")
+                        updateProgress(0.6)
 
-            setStatusText("Generating summary...")
-            updateProgress(0.5)
-            const summaryContent = await generateSummary(finalQA, storyTitle)
+                        const newDetailStory = await generateDetailStoryFromCall(
+                            storyTitle,
+                            prevQA,
+                            callData.callDetailText_Caller,
+                            callData.callDetailText_Callee
+                        )
 
-            setStatusText("Creating description...")
-            updateProgress(0.7)
-            const descriptionContent = await generateDescription(finalQA, storyTitle)
+                        // update field detailStory
+                        await updateDoc(storyRef, {
+                            detailStory: newDetailStory,
+                            story_generated_date: new Date().toISOString(),
+                        })
 
+                        console.log("✅ Updated detailStory in Firestore")
+                        setStatusText("Updated detail story successfully!")
+                        updateProgress(1.0)
+                    } else {
+                        console.log("⚠️ Call not found with id:", storyData.callId)
+                    }
+                }
 
+                setStatusText("Loaded existing story!")
+                updateProgress(1.0)
 
-            // Step 3: Save to Firebase và lấy story ID
-            setStatusText("Saving your story...")
-            updateProgress(0.8)
-            const storyId = await saveToFirebase(
-                storyContent,
-                summaryContent,
-                descriptionContent,
-                allMessages,
-                storyTitle,
-                shareType
-            )
+            } else {
+                // ========== CASE 1 (keep old flow) ==========
+                setStatusText("Analyzing your conversation...")
+                updateProgress(0.1)
 
-            setStatusText("Story created successfully!")
-            updateProgress(1.0)
+                const finalQA = params.finalQA ? JSON.parse(params.finalQA as string) : []
+                const allMessages = params.allMessages ? JSON.parse(params.allMessages as string) : []
+                const storyTitle = (params.storyTitle as string) || "Untitled Story"
+                const shareType = (params.shareType as string) || "myself"
 
-            // Navigate to story detail page với story ID
-            setTimeout(() => {
-                router.replace(`/story/${storyId}`)
-            }, 1500)
+                // Call OpenAI
+                setStatusText("Creating your detailed story...")
+                updateProgress(0.3)
+                const storyContent = await generateStoryContent(finalQA, storyTitle)
 
+                setStatusText("Generating summary...")
+                updateProgress(0.5)
+                const summaryContent = await generateSummary(finalQA, storyTitle)
+
+                setStatusText("Creating description...")
+                updateProgress(0.7)
+                const descriptionContent = await generateDescription(finalQA, storyTitle)
+
+                // Save to Firebase
+                setStatusText("Saving your story...")
+                updateProgress(0.8)
+                const storyId = await saveToFirebase(
+                    storyContent,
+                    summaryContent,
+                    descriptionContent,
+                    allMessages,
+                    storyTitle,
+                    shareType
+                )
+
+                setStatusText("Story created successfully!")
+                updateProgress(1.0)
+
+                setTimeout(() => {
+                    router.replace(`/story/${storyId}`)
+                }, 1500)
+            }
         } catch (error) {
             console.error("Error generating story:", error)
             setStatusText("Error creating story. Please try again.")
@@ -77,7 +134,69 @@ export default function Step7_Loading() {
             }, 2000)
         }
     }
+    // New generate detailStory function
+    const generateDetailStoryFromCall = async (
+        title: string,
+        previousQA: any[],
+        callerText: string,
+        calleeText: string
+    ): Promise<string> => {
+        try {
+            const qaText = previousQA
+                .map((item) => `Q: ${item.question}\nA: ${item.answer}`)
+                .join("\n\n")
 
+            const systemMessage = {
+                role: "system",
+                content: `You are a skilled storyteller and memory keeper. Create a detailed, engaging story based on the personal conversation below.
+
+Instructions:
+- Write in first person narrative style
+- Include emotions, sensory details, and vivid descriptions
+- Make it flow naturally like a personal memoir or journal entry
+- Length: 400-600 words
+- Keep the authentic voice and personal touch from the conversation
+- Focus on the meaningful moments, relationships, and emotions mentioned
+- Create a coherent narrative that connects all the shared memories
+- Use descriptive language to bring the story to life`,
+            }
+
+            const userMessage = {
+                role: "user",
+                content: `This is a call about the topic: "${title}".
+There are some questions that started the story:
+${qaText || "None"}.
+
+In this story:
+- Caller said the following: "${callerText}"
+- Callee said the following: "${calleeText}"
+
+Please rewrite a detailed, coherent, and emotional story based on this information.`,
+            }
+
+            const response = await axios.post(
+                "https://api.openai.com/v1/chat/completions",
+                {
+                    model: "gpt-3.5-turbo",
+                    messages: [systemMessage, userMessage],
+                    max_tokens: 1000,
+                    temperature: 0.7,
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${OPENAI_API_KEY}`,
+                    },
+                    timeout: 30000,
+                },
+            )
+
+            return response.data.choices[0].message.content.trim()
+        } catch (error) {
+            console.error("❌ Error generating detailStory:", error)
+            throw new Error("Failed to generate detailStory from call")
+        }
+    }
     const updateProgress = (value: number) => {
         Animated.timing(progress, {
             toValue: value,
@@ -92,16 +211,16 @@ export default function Step7_Loading() {
             const systemMessage = {
                 role: "system",
                 content: `You are a skilled storyteller and memory keeper. Create a detailed, engaging story based on the personal conversation below.
-                         
-                Instructions:
-                - Write in first person narrative style
-                - Include emotions, sensory details, and vivid descriptions
-                - Make it flow naturally like a personal memoir or journal entry
-                - Length: 400-600 words
-                - Keep the authentic voice and personal touch from the conversation
-                - Focus on the meaningful moments, relationships, and emotions mentioned
-                - Create a coherent narrative that connects all the shared memories
-                - Use descriptive language to bring the story to life`,
+                         
+                Instructions:
+                - Write in first person narrative style
+                - Include emotions, sensory details, and vivid descriptions
+                - Make it flow naturally like a personal memoir or journal entry
+                - Length: 400-600 words
+                - Keep the authentic voice and personal touch from the conversation
+                - Focus on the meaningful moments, relationships, and emotions mentioned
+                - Create a coherent narrative that connects all the shared memories
+                - Use descriptive language to bring the story to life`,
             }
 
             const userMessage = {
@@ -214,7 +333,7 @@ export default function Step7_Loading() {
         messages: any[],
         title: string,
         shareType: string,
-    ): Promise<string> => { // Thêm Promise<string> để return story ID
+    ): Promise<string> => { // Added Promise<string> to return story ID
         try {
             // 1. Create conversation document
             const conversationRef = await addDoc(collection(db, "conversations"), {
@@ -250,9 +369,9 @@ export default function Step7_Loading() {
                 title: title,
             })
 
-            const storyId = storyRef.id // Lấy ID của story vừa tạo
+            const storyId = storyRef.id // Get the ID of the newly created story
 
-            return storyId // Trả về story ID
+            return storyId // Return story ID
         } catch (error) {
             console.error("❌ Error saving to Firebase:", error)
             throw error

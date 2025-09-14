@@ -1,10 +1,8 @@
-import { useCall } from '@/contexts/CallContext';
 import { auth, db } from '@/firebase/firebaseConfig';
 import { useTrackedRouter } from '@/hooks/useTrackedRouter';
-import { useCallStoryStore } from '@/store/callStoryStore';
 import { screenRatio } from '@/utils/initScreen';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
@@ -24,11 +22,11 @@ interface Friend {
     profilePicture: string;
 }
 
-export default function FriendListScreen() {
+export default function Step5_2_SelectPersonChat() {
     const [friends, setFriends] = useState<Friend[]>([]);
     const [searchText, setSearchText] = useState<string>('');
     const router = useTrackedRouter();
-    const { startCall, hasCam, hasMic } = useCall();
+    const params = useLocalSearchParams()
 
     useFocusEffect(() => {
         const fetchFriends = async () => {
@@ -66,17 +64,17 @@ export default function FriendListScreen() {
         friend.name.toLowerCase().includes(searchText.toLowerCase())
     );
 
-    const handleCall = async (friend: Friend) => {
-        if (!hasCam || !hasMic) {
-            Alert.alert('Error', 'Camera and microphone permissions are required');
-            return;
-        }
-        useCallStoryStore.getState().clearAll();
-
+    const handleChat = async (friend: Friend) => {
         try {
-            await startCall(friend.uid.trim());
-            // Navigate to call screen
-            router.push('/(tabs)/call_screen');
+            router.push({
+                pathname: "/(tabs)/chat_with_person",
+                params: {
+                    id: friend.uid,
+                    previousQA: params.basicQA,
+                    storyTitle: params.storyTitle,
+                    shareType: params.shareType
+                },
+            })
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             Alert.alert('Error', 'Unable to start the call');
@@ -87,11 +85,11 @@ export default function FriendListScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#FFDCD1', '#ECEBD0']} style={styles.gradient} />
             <View style={styles.contentWrapper}>
-                <Text style={styles.title}>My family and friends</Text>
+                <Text style={styles.title}>Select Person to Chat</Text>
 
                 <View style={styles.inputSearchView}>
                     <Image
-                        source={require('../../assets/images/NewUI/search-normal.png')}
+                        source={require('../../../assets/images/NewUI/search-normal.png')}
                         style={styles.inputSearchImg}
                     />
                     <TextInput
@@ -116,31 +114,7 @@ export default function FriendListScreen() {
                         numColumns={3}
                         contentContainerStyle={styles.grid}
                         renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={styles.friendItem}
-                                // onPress={() => handleCall(item)}
-                                onLongPress={() =>
-                                    Alert.alert(
-                                        "Action",
-                                        `What would you like to do with ${item.name}?`,
-                                        [
-                                            {
-                                                text: "Chat",
-                                                onPress: () => router.push({
-                                                    pathname: "/(tabs)/chat_with_person",
-                                                    params: { id: item.uid }, // 🔥 pass uid to chat screen
-                                                }),
-                                            },
-                                            {
-                                                text: "Call",
-                                                onPress: () => handleCall(item),
-                                            },
-                                            { text: "Cancel", style: "cancel" },
-                                        ],
-                                        { cancelable: true }
-                                    )
-                                }
-                            >
+                            <TouchableOpacity style={styles.friendItem} onPress={() => handleChat(item)}>
                                 {item.profilePicture ? (
                                     <Image source={{ uri: item.profilePicture }} style={styles.avatar} />
                                 ) : (
@@ -161,7 +135,7 @@ export default function FriendListScreen() {
                 style={styles.addButton}
                 onPress={() => router.push('/(tabs)/invite_contact')}
             >
-                <Image source={require('../../assets/images/NewUI/profile-add.png')} />
+                <Image source={require('../../../assets/images/NewUI/profile-add.png')} />
             </TouchableOpacity>
         </View>
     );

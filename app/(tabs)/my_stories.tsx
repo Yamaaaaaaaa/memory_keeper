@@ -103,17 +103,16 @@ export default function MyStoriesScreen() {
                 console.log("Processing:", data.processing, "Type:", typeof data.processing)
                 console.log("Owner ID:", data.ownerId)
 
-                // Chỉ map các trường cần thiết
-                const story: Story = {
-                    id: docSnapshot.id,
-                    title: data.title || "Untitled Story",
-                    processing: data.processing || 0,
-                    ownerId: data.ownerId || "",
-                    conversation_id: data.conversation_id || undefined,
+                if (data.conversation_id) {
+                    const story: Story = {
+                        id: docSnapshot.id,
+                        title: data.title || "Untitled Story",
+                        processing: data.processing || 0,
+                        ownerId: data.ownerId || "",
+                        conversation_id: data.conversation_id,
+                    }
+                    storiesData.push(story)
                 }
-
-                console.log("Mapped story:", story)
-                storiesData.push(story)
             })
 
             // console.log("Total stories loaded:", storiesData.length)

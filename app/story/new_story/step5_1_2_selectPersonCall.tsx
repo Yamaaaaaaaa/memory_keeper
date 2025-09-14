@@ -4,7 +4,7 @@ import { useTrackedRouter } from '@/hooks/useTrackedRouter';
 import { useCallStoryStore } from '@/store/callStoryStore';
 import { screenRatio } from '@/utils/initScreen';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
@@ -24,11 +24,13 @@ interface Friend {
     profilePicture: string;
 }
 
-export default function FriendListScreen() {
+export default function Step5_1_2_SelectPersonCall() {
     const [friends, setFriends] = useState<Friend[]>([]);
     const [searchText, setSearchText] = useState<string>('');
     const router = useTrackedRouter();
     const { startCall, hasCam, hasMic } = useCall();
+    const params = useLocalSearchParams()
+    const { hasStory, id, initialQuestion, setHasStory, setInitQuestion } = useCallStoryStore();
 
     useFocusEffect(() => {
         const fetchFriends = async () => {
@@ -47,7 +49,7 @@ export default function FriendListScreen() {
                     const friendData = friendDoc.data();
                     return {
                         uid: id,
-                        name: friendData?.username || 'No Name',
+                        name: friendData?.username || 'Không tên',
                         profilePicture: friendData?.profilePicture || '',
                     };
                 });
@@ -55,7 +57,7 @@ export default function FriendListScreen() {
                 const friendList = await Promise.all(friendPromises);
                 setFriends(friendList);
             } catch (error) {
-                console.error('Error fetching friends:', error);
+                console.error('Lỗi khi tải danh sách bạn bè:', error);
             }
         };
 
@@ -68,18 +70,36 @@ export default function FriendListScreen() {
 
     const handleCall = async (friend: Friend) => {
         if (!hasCam || !hasMic) {
-            Alert.alert('Error', 'Camera and microphone permissions are required');
+            Alert.alert('Lỗi', 'Cần cấp quyền truy cập Camera và Microphone');
             return;
         }
         useCallStoryStore.getState().clearAll();
 
         try {
+            setHasStory(true);
+            // convert params.previousQA (string) -> object[]
+            const parsedQA = params.previousQA
+                ? JSON.parse(params.previousQA as string)
+                : []
+
+            setInitQuestion({
+                previousQA: parsedQA, // lúc này là mảng [{question, answer}, ...]
+                storyTitle: (params.storyTitle as string) || "Untitled Story",
+                shareType: (params.shareType as string) || "myself",
+            })
+
+            console.log('====================================');
+            console.log("Step5_1_2 Old params: ", params);
+            console.log("✅ New state:", useCallStoryStore.getState());
+            console.log('====================================');
+
             await startCall(friend.uid.trim());
-            // Navigate to call screen
+            // Điều hướng đến màn hình gọi
             router.push('/(tabs)/call_screen');
+
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            Alert.alert('Error', 'Unable to start the call');
+            Alert.alert('Lỗi', 'Không thể thực hiện cuộc gọi');
         }
     };
 
@@ -87,16 +107,16 @@ export default function FriendListScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#FFDCD1', '#ECEBD0']} style={styles.gradient} />
             <View style={styles.contentWrapper}>
-                <Text style={styles.title}>My family and friends</Text>
+                <Text style={styles.title}>Chọn người để gọi</Text>
 
                 <View style={styles.inputSearchView}>
                     <Image
-                        source={require('../../assets/images/NewUI/search-normal.png')}
+                        source={require('../../../assets/images/NewUI/search-normal.png')}
                         style={styles.inputSearchImg}
                     />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search..."
+                        placeholder="Tìm kiếm..."
                         value={searchText}
                         onChangeText={setSearchText}
                     />
@@ -105,8 +125,8 @@ export default function FriendListScreen() {
                 {filteredFriends.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyStateSubtext}>
-                            You don’t have anyone in your contact list yet. Add family and friends
-                            from your phone contacts or send pdf as a link
+                            Bạn chưa có ai trong danh bạ. Hãy thêm gia đình và bạn bè
+                            từ danh bạ điện thoại hoặc gửi pdf dưới dạng liên kết
                         </Text>
                     </View>
                 ) : (
@@ -116,31 +136,7 @@ export default function FriendListScreen() {
                         numColumns={3}
                         contentContainerStyle={styles.grid}
                         renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={styles.friendItem}
-                                // onPress={() => handleCall(item)}
-                                onLongPress={() =>
-                                    Alert.alert(
-                                        "Action",
-                                        `What would you like to do with ${item.name}?`,
-                                        [
-                                            {
-                                                text: "Chat",
-                                                onPress: () => router.push({
-                                                    pathname: "/(tabs)/chat_with_person",
-                                                    params: { id: item.uid }, // 🔥 pass uid to chat screen
-                                                }),
-                                            },
-                                            {
-                                                text: "Call",
-                                                onPress: () => handleCall(item),
-                                            },
-                                            { text: "Cancel", style: "cancel" },
-                                        ],
-                                        { cancelable: true }
-                                    )
-                                }
-                            >
+                            <TouchableOpacity style={styles.friendItem} onPress={() => handleCall(item)}>
                                 {item.profilePicture ? (
                                     <Image source={{ uri: item.profilePicture }} style={styles.avatar} />
                                 ) : (
@@ -161,7 +157,7 @@ export default function FriendListScreen() {
                 style={styles.addButton}
                 onPress={() => router.push('/(tabs)/invite_contact')}
             >
-                <Image source={require('../../assets/images/NewUI/profile-add.png')} />
+                <Image source={require('../../../assets/images/NewUI/profile-add.png')} />
             </TouchableOpacity>
         </View>
     );
@@ -223,13 +219,13 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
     },
     avatarFallback: {
-        backgroundColor: "#CCC", // background color for fallback avatar
+        backgroundColor: "#CCC", // nền cho avatar mặc định
         alignItems: "center",
         justifyContent: "center",
     },
     avatarText: {
         fontSize: screenRatio >= 2 ? 38 : 30,
         fontFamily: "Alberts",
-        color: "#fff", // text color
+        color: "#fff", // màu chữ
     },
 });

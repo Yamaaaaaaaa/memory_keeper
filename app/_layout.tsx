@@ -1,3 +1,5 @@
+import { IncomingCallNotification } from "@/components/IncomingCallNotification";
+import { CallProvider } from "@/contexts/CallContext";
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
 import { useNavigationStore } from "@/store/navigationStore";
 import { useFonts } from "expo-font";
@@ -69,44 +71,47 @@ export default function StepCreateStoriesLayout() {
   if (!loaded) return null;
 
   return (
-    <View style={{ flex: 1 }}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="story" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{}} />
-      </Stack>
+    <CallProvider>
+      <IncomingCallNotification />
+      <View style={{ flex: 1 }}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="story" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{}} />
+        </Stack>
 
-      {!hideTabBar && (
-        <View style={[styles.tabBar, { paddingBottom: insets.bottom + 10 }]}>
-          <TouchableOpacity
-            onPress={goBack}
-            disabled={!canGoBack}
-            style={[styles.button, !canGoBack && styles.disabled]}
-          >
-            {/* <Ionicons name="arrow-back" size={20} color={canGoBack ? "black" : "gray"} /> */}
-            <Image source={require("../assets/images/NewUI/Chev_left.png")} />
-            {/* <Text>Back</Text> */}
-          </TouchableOpacity>
+        {!hideTabBar && (
+          <View style={[styles.tabBar, { paddingBottom: insets.bottom + 10 }]}>
+            <TouchableOpacity
+              onPress={goBack}
+              disabled={!canGoBack}
+              style={[styles.button, !canGoBack && styles.disabled]}
+            >
+              {/* <Ionicons name="arrow-back" size={20} color={canGoBack ? "black" : "gray"} /> */}
+              <Image source={require("../assets/images/NewUI/Chev_left.png")} />
+              {/* <Text>Back</Text> */}
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={goHome} style={styles.button}>
-            {/* <Ionicons name="home" size={20} color="black" /> */}
-            <Image source={require("../assets/images/NewUI/HomeIcon.png")} />
-            {/* <Text>Home</Text> */}
-          </TouchableOpacity>
+            <TouchableOpacity onPress={goHome} style={styles.button}>
+              {/* <Ionicons name="home" size={20} color="black" /> */}
+              <Image source={require("../assets/images/NewUI/HomeIcon.png")} />
+              {/* <Text>Home</Text> */}
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={goForward}
-            disabled={forwardStack.length === 0}
-            style={[styles.button, forwardStack.length === 0 && styles.disabled]}
-          >
-            {/* <Ionicons name="arrow-forward" size={20} color={forwardStack.length > 0 ? "black" : "gray"} /> */}
-            <Image source={require("../assets/images/NewUI/Chev_right.png")} />
-            {/* <Text>Forward</Text> */}
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+            <TouchableOpacity
+              onPress={goForward}
+              disabled={forwardStack.length === 0}
+              style={[styles.button, forwardStack.length === 0 && styles.disabled]}
+            >
+              {/* <Ionicons name="arrow-forward" size={20} color={forwardStack.length > 0 ? "black" : "gray"} /> */}
+              <Image source={require("../assets/images/NewUI/Chev_right.png")} />
+              {/* <Text>Forward</Text> */}
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </CallProvider>
   );
 }
 

@@ -1,11 +1,13 @@
-import { View, StyleSheet, Text, TouchableOpacity, Image } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { screenRatio } from "@/utils/initScreen"
-import React from "react";
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { screenRatio } from "@/utils/initScreen";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams } from "expo-router";
+import React from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function Step5_CallType() {
+export default function Step5_SelectColabType() {
     const router = useTrackedRouter()
+    const params = useLocalSearchParams()
 
     return (
         <View style={styles.container}>
@@ -16,17 +18,32 @@ export default function Step5_CallType() {
                 </View>
 
                 <View style={styles.optionsContainer}>
-                    <TouchableOpacity style={styles.optionButton} onPress={() => router.push("/story/new_story/step6_generateScreen")}>
-                        <Text style={styles.optionText}>Phone Call</Text>
+                    <TouchableOpacity style={styles.optionButton}
+                        onPress={() => router.push({
+                            pathname: "/story/new_story/step5_1_selectTypeCall",
+                            params: {
+                                previousQA: params.basicQA,
+                                storyTitle: params.storyTitle,
+                                shareType: params.shareType
+                            }
+                        })}>
+                        <Text style={styles.optionText}>Call</Text>
                         <Image source={require("../../../assets/images/NewUI/voice-cricle.png")} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.optionButton} onPress={() => router.push("/story/new_story/step6_generateScreen")}>
-                        <Text style={styles.optionText}>Me plus one</Text>
+                    <TouchableOpacity style={styles.optionButton} onPress={() => router.push({
+                        pathname: "/story/new_story/step5_2_selectPersonChat",
+                        params: {
+                            previousQA: params.basicQA,
+                            storyTitle: params.storyTitle,
+                            shareType: params.shareType
+                        }
+                    })} >
+                        <Text style={styles.optionText}>Chat</Text>
                         <Image source={require("../../../assets/images/NewUI/videocall.png")} />
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </View >
     )
 }
 

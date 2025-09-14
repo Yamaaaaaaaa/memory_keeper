@@ -1,8 +1,8 @@
-import React, { useState } from "react"
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Image } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { screenRatio } from "@/utils/initScreen"
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { screenRatio } from "@/utils/initScreen";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState } from "react";
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 const questions = [
     "What is this story about?",
@@ -14,7 +14,7 @@ const questions = [
 export default function Step2_Questions() {
     const [answers, setAnswers] = useState<string[]>(new Array(questions.length).fill(""))
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-    const [storyTitle, setStoryTitle] = useState<string>("Enter Story Title")
+    const [storyTitle, setStoryTitle] = useState<string>("")
     const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null) // New state for selected answer
     const router = useTrackedRouter()
 
@@ -64,7 +64,7 @@ export default function Step2_Questions() {
             <LinearGradient colors={["#FFDCD1", "#ECEBD0"]} style={styles.gradient} />
             <View style={styles.containerWrapper}>
                 <View style={styles.header}>
-                    <TextInput style={styles.title} onChangeText={setStoryTitle}>
+                    <TextInput style={styles.title} onChangeText={setStoryTitle} placeholder="Enter Story Title">
                         {storyTitle}
                     </TextInput>
                     <Image source={require("../../../assets/images/NewUI/pen.png")} style={styles.headerIcon} />

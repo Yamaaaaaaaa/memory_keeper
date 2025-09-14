@@ -1,4 +1,4 @@
-// 2. IncomingCallNotification.tsx - Component thông báo cuộc gọi đến
+// 2. IncomingCallNotification.tsx - Incoming Call Notification Component
 import { useCall } from '@/contexts/CallContext';
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,22 +12,22 @@ export const IncomingCallNotification: React.FC = () => {
         <Modal visible={true} transparent animationType="slide">
             <View style={styles.overlay}>
                 <View style={styles.callCard}>
-                    <Text style={styles.title}>Cuộc gọi đến</Text>
-                    <Text style={styles.caller}>Từ: {incomingCall.callerName}</Text>
+                    <Text style={styles.title}>Incoming Call</Text>
+                    <Text style={styles.caller}>From: {incomingCall.callerName}</Text>
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
                             style={[styles.button, styles.declineButton]}
                             onPress={declineCall}
                         >
-                            <Text style={styles.buttonText}>Từ chối</Text>
+                            <Text style={styles.buttonText}>Decline</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             style={[styles.button, styles.acceptButton]}
                             onPress={acceptCall}
                         >
-                            <Text style={styles.buttonText}>Chấp nhận</Text>
+                            <Text style={styles.buttonText}>Accept</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -83,4 +83,3 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
-

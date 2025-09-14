@@ -1,6 +1,6 @@
-// 4. CallScreen.tsx - Màn hình call với đầy đủ tính năng
+// 4. CallScreen.tsx - Call screen with full functionality
 import { useCall } from '@/contexts/CallContext';
-import { useNavigation } from '@react-navigation/native';
+import { useCallStoryStore } from '@/store/callStoryStore';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,19 +20,30 @@ const CallScreen: React.FC = () => {
         toggleSpeaker,
         endCall,
     } = useCall();
-
-    const navigation = useNavigation();
+    const { hasStory, id, initialQuestion, setHasStory, setInitQuestion } = useCallStoryStore();
 
     useEffect(() => {
-        // Navigate back when call ends
-        if (!currentCallId || callStatus === 'ended' || callStatus === 'declined') {
-            navigation.goBack();
+        console.log('====================================');
+        console.log("Callscreen Old");
+        console.log("id: ", id);
+        console.log("hasStory: ", hasStory);
+        console.log("initialQuestion: ", initialQuestion);
+        console.log('====================================');
+
+
+        // Navigate back when the call ends
+        if (callStatus === 'ended' || callStatus === 'declined') {
+            console.log("endueffect");
+            if (hasStory) router.replace("/story/new_story/step6_generateScreen")
+            else router.replace("/(tabs)")
         }
-    }, [currentCallId, callStatus, navigation]);
+    }, [currentCallId, callStatus]);
 
     const handleEndCall = async () => {
+        console.log("handleEndCall");
         await endCall();
-        router.push("/(tabs)")
+        if (hasStory) router.replace("/story/new_story/step6_generateScreen")
+        else router.replace("/(tabs)")
     };
 
     return (
@@ -40,8 +51,8 @@ const CallScreen: React.FC = () => {
             <View style={styles.header}>
                 <Text style={styles.callId}>Call ID: {currentCallId}</Text>
                 <Text style={styles.status}>
-                    {callStatus === 'ringing' ? 'Đang gọi...' :
-                        callStatus === 'accepted' ? 'Đang kết nối' :
+                    {callStatus === 'ringing' ? 'Calling...' :
+                        callStatus === 'accepted' ? 'Connecting...' :
                             callStatus || '-'}
                 </Text>
             </View>

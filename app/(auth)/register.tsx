@@ -1,10 +1,10 @@
-import { Dimensions, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/firebase/firebaseConfig';
-import { router } from 'expo-router';
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from 'expo-router';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import React, { useState } from 'react';
+import { Alert, Dimensions, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const screenHeight = Dimensions.get('window').height;
 const screenWidth = Dimensions.get('window').width;
@@ -13,6 +13,7 @@ console.log("screenHeight", screenHeight);
 console.log("screenWidth", screenWidth);
 console.log("screenHeight/screenWidth", screenHeight / screenWidth);
 console.log('====================================');
+
 export default function RegisterScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -24,7 +25,7 @@ export default function RegisterScreen() {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 👉 Lưu thông tin vào Firestore
+            // 👉 Save user info to Firestore
             await setDoc(doc(db, 'users', user.uid), {
                 uid: user.uid,
                 email: user.email,
@@ -33,9 +34,9 @@ export default function RegisterScreen() {
             });
             setLoading(true);
             Alert.alert("Success", "You have signed up successfully!");
-            router.replace('/(tabs)'); // chuyển sang màn hình chính sau khi đăng nhập
+            router.replace('/(tabs)'); // navigate to the main screen after signing up
         } catch (error: any) {
-            Alert.alert('Lỗi đăng nhập', error.message);
+            Alert.alert('Sign Up Error', error.message);
         } finally {
             setLoading(false);
         }

@@ -1,25 +1,23 @@
 "use client"
-import React, { useEffect, useState } from "react"
-import {
-    View,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    ScrollView,
-    Alert,
-    Share,
-    TextInput,
-    Dimensions,
-    StatusBar
-} from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { router, useLocalSearchParams } from "expo-router"
-import { Ionicons } from "@expo/vector-icons"
-import { doc, getDoc, updateDoc } from "firebase/firestore"
 import { db } from "@/firebase/firebaseConfig"
 import { screenRatio } from "@/utils/initScreen"
+import { Ionicons } from "@expo/vector-icons"
+import { LinearGradient } from "expo-linear-gradient"
+import { router, useLocalSearchParams } from "expo-router"
+import { doc, getDoc, updateDoc } from "firebase/firestore"
+import React, { useEffect, useState } from "react"
+import {
+    Alert,
+    ScrollView,
+    Share,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native"
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
 const WORDS_PER_PAGE = 130;
 
 export default function StoryDetailScreen() {

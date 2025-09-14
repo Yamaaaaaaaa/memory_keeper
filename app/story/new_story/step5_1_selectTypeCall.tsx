@@ -5,50 +5,37 @@ import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function Step4_SelectShare() {
-    const params = useLocalSearchParams()
+export default function Step5_1_SelectTypeCall() {
     const router = useTrackedRouter()
-
-    const handleSelectOption = (shareType: string) => {
-        router.push({
-            pathname: "/story/new_story/step4_2_selectChatPeopleOrAI",
-            params: {
-                basicQA: params.basicQA,
-                storyTitle: params.storyTitle,
-                shareType: shareType // "myself" hoặc "me_plus_one"
-            }
-        })
-    }
-    const handleSelectOptionWithOtherPeople = (shareType: string) => {
-        router.push({
-            pathname: "/story/new_story/step5_selectColabType",
-            params: {
-                basicQA: params.basicQA,
-                storyTitle: params.storyTitle,
-                shareType: shareType // "myself" hoặc "me_plus_one"
-            }
-        })
-    }
+    const params = useLocalSearchParams()
+    console.log('====================================');
+    console.log("Step5:", params);
+    console.log('====================================');
     return (
         <View style={styles.container}>
             <LinearGradient colors={["#FFDCD1", "#ECEBD0"]} style={styles.gradient} />
             <View style={styles.contentWrapper}>
                 <View style={styles.questionContainer}>
-                    <Text style={styles.questionText}>Who would you like to share your story with/tell your story to?</Text>
+                    <Text style={styles.questionText}>Call your plus one</Text>
                 </View>
 
                 <View style={styles.optionsContainer}>
-                    <TouchableOpacity style={styles.optionButton} onPress={() => handleSelectOption("myself")}>
-                        <Text style={styles.optionText}>Myself</Text>
-                        <Image source={require("../../../assets/images/NewUI/myself.png")} />
-
-
+                    <TouchableOpacity style={styles.optionButton} onPress={() => router.push("/story/new_story/step6_generateScreen")}>
+                        <Text style={styles.optionText}>Phone Call</Text>
+                        <Image source={require("../../../assets/images/NewUI/voice-cricle.png")} />
                     </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.optionButton} onPress={() => handleSelectOptionWithOtherPeople("me_plus_one")}>
-                        <Text style={styles.optionText}>Me plus one</Text>
-                        <Image source={require("../../../assets/images/NewUI/meplusone.png")} />
-
+                    <TouchableOpacity style={styles.optionButton}
+                        onPress={() => router.push({
+                            pathname: "/story/new_story/step5_1_2_selectPersonCall",
+                            params: {
+                                previousQA: params.previousQA,
+                                storyTitle: params.storyTitle,
+                                shareType: params.shareType
+                            }
+                        })}
+                    >
+                        <Text style={styles.optionText}>Video Call</Text>
+                        <Image source={require("../../../assets/images/NewUI/videocall.png")} />
                     </TouchableOpacity>
                 </View>
             </View>

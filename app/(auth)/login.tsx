@@ -1,12 +1,11 @@
-import { Dimensions, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/firebase/firebaseConfig';
-import { router } from 'expo-router';
-import { LinearGradient } from "expo-linear-gradient";
-import * as Contacts from 'expo-contacts';
 import { screenHeight, screenWidth } from '@/utils/initScreen';
-
+import * as Contacts from 'expo-contacts';
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from 'expo-router';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import React, { useState } from 'react';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -18,10 +17,9 @@ export default function LoginScreen() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             setLoading(true);
-            Alert.alert("Success", "You have loged in successfully!");
+            Alert.alert("Success", "You have logged in successfully!");
 
-
-            // ➕ Gọi lấy danh bạ ở đây
+            // ➕ Fetch contacts here
             const { status } = await Contacts.requestPermissionsAsync();
             if (status === 'granted') {
                 const { data } = await Contacts.getContactsAsync({
@@ -35,9 +33,9 @@ export default function LoginScreen() {
                 Alert.alert('Permission Denied', 'Cannot access contacts without permission.');
             }
             console.log("Contacts", contacts);
-            router.replace('/(tabs)'); // chuyển sang màn hình chính sau khi đăng nhập
+            router.replace('/(tabs)'); // navigate to main screen after login
         } catch (error: any) {
-            Alert.alert('Lỗi đăng nhập', error.message);
+            Alert.alert('Login Failed', error.message);
         } finally {
             setLoading(false);
         }
@@ -99,19 +97,19 @@ export default function LoginScreen() {
                 <View style={styles.othersloginView}>
                     <TouchableOpacity
                         style={styles.itemOthersLoginBtn}
-                        onPress={() => Alert.alert("Sign up with Facebook")}
+                        onPress={() => Alert.alert("Sign in with Facebook")}
                     >
                         <Image source={require("../../assets/images/NewUI/fb_icon.png")} style={styles.itemOthersLoginIcon} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.itemOthersLoginBtn}
-                        onPress={() => Alert.alert("Sign up with Google")}
+                        onPress={() => Alert.alert("Sign in with Google")}
                     >
                         <Image source={require("../../assets/images/NewUI/gm_icon.png")} style={styles.itemOthersLoginIcon} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.itemOthersLoginBtn}
-                        onPress={() => Alert.alert("Sign up with Apple Account")}
+                        onPress={() => Alert.alert("Sign in with Apple Account")}
                     >
                         <Image source={require("../../assets/images/NewUI/apple_icon.png")} style={styles.itemOthersLoginIcon} />
                     </TouchableOpacity>

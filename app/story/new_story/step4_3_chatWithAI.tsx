@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useRef } from "react"
-import {
-    View,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Image,
-    TextInput,
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    ActivityIndicator
-} from "react-native"
+import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { screenRatio } from "@/utils/initScreen"
+import axios from "axios"
 import { LinearGradient } from "expo-linear-gradient"
 import { useLocalSearchParams } from "expo-router"
-import axios from "axios"
-import { screenRatio } from "@/utils/initScreen"
-import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import React, { useEffect, useRef, useState } from "react"
+import {
+    ActivityIndicator,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native"
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_API_KEY;
 

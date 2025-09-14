@@ -1,22 +1,24 @@
-import { View, StyleSheet, Text, TouchableOpacity, Image } from "react-native"
+import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { useCallStoryStore } from "@/store/callStoryStore"
+import { screenRatio } from "@/utils/initScreen"
 import { LinearGradient } from "expo-linear-gradient"
 import { useLocalSearchParams } from "expo-router"
-import { screenRatio } from "@/utils/initScreen"
 import React, { useEffect } from "react"
-import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 export default function Step6_Generate() {
     const params = useLocalSearchParams()
     const router = useTrackedRouter()
+    const { hasStory } = useCallStoryStore.getState();
 
     useEffect(() => {
-        console.log("=== STEP6 GENERATE PARAMS ===")
-        console.log("All params:", params)
-        console.log("Story Title:", params.storyTitle)
-        console.log("Share Type:", params.shareType)
-        console.log("Total Questions:", params.totalQuestions)
-        console.log("Basic Questions:", params.basicQuestions)
-        console.log("Follow Up Questions:", params.followUpQuestions)
+        // console.log("=== STEP6 GENERATE PARAMS ===")
+        // console.log("All params:", params)
+        // console.log("Story Title:", params.storyTitle)
+        // console.log("Share Type:", params.shareType)
+        // console.log("Total Questions:", params.totalQuestions)
+        // console.log("Basic Questions:", params.basicQuestions)
+        // console.log("Follow Up Questions:", params.followUpQuestions)
 
         if (params.finalQA) {
             try {
@@ -48,7 +50,12 @@ export default function Step6_Generate() {
 
     const handleGenerateStory = () => {
         console.log("Generate story clicked")
-        router.push({
+        if (hasStory) {
+            router.push({
+                pathname: "/story/new_story/step7_loadingGenerate",
+            })
+        }
+        else router.push({
             pathname: "/story/new_story/step7_loadingGenerate",
             params: params
         })

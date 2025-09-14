@@ -10,7 +10,10 @@ export default function StepCreateStoriesLayout() {
             <Stack.Screen name="step4_selectShareStories" options={{ headerShown: false }} />
             <Stack.Screen name="step4_2_selectChatPeopleOrAI" options={{ headerShown: false }} />
             <Stack.Screen name="step4_3_chatWithAI" options={{ headerShown: false }} />
-            <Stack.Screen name="step5_colabChooseCallType" options={{ headerShown: false }} />
+            <Stack.Screen name="step5_selectColabType" options={{ headerShown: false }} />
+            <Stack.Screen name="step5_1_selectTypeCall" options={{ headerShown: false }} />
+            <Stack.Screen name="step5_1_2_selectPersonCall" options={{ headerShown: false }} />
+            <Stack.Screen name="step5_2_selectPersonChat" options={{ headerShown: false }} />
             <Stack.Screen name="step6_generateScreen" options={{ headerShown: false }} />
             <Stack.Screen name="step7_loadingGenerate" options={{ headerShown: false }} />
             {/* Các màn khác nếu muốn ẩn header tương tự */}
