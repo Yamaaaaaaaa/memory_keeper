@@ -68,6 +68,7 @@ export default function Step7_Loading() {
 
                         // update field detailStory
                         await updateDoc(storyRef, {
+                            title: storyTitle,
                             detailStory: newDetailStory,
                             story_generated_date: new Date().toISOString(),
                         })
