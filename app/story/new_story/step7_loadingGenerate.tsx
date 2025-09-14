@@ -82,6 +82,9 @@ export default function Step7_Loading() {
 
                 setStatusText("Loaded existing story!")
                 updateProgress(1.0)
+                setTimeout(() => {
+                    router.replace(`/story/${storyDoc.id}`)
+                }, 1500)
 
             } else {
                 // ========== CASE 1 (keep old flow) ==========

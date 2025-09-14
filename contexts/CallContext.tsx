@@ -361,8 +361,15 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 typeContact: 'call',
                 processing: 0,
             });
+            console.log("✅ hasStory create story ", useCallStoryStore.getState().hasStory);
+
             // Sau khi thêm doc thành công
             if (hasStory) {
+                console.log('====================================');
+
+                console.log("setID");
+                console.log("storyRef.id", storyRef.id);
+                console.log('====================================');
                 setId(storyRef.id); // lưu id của stories vừa tạo vào Zustand
             }
         } catch (e) {

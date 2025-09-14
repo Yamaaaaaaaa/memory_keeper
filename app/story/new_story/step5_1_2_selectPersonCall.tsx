@@ -90,7 +90,9 @@ export default function Step5_1_2_SelectPersonCall() {
 
             console.log('====================================');
             console.log("Step5_1_2 Old params: ", params);
-            console.log("✅ New state:", useCallStoryStore.getState());
+            console.log("✅ New state: id ", useCallStoryStore.getState().id);
+            console.log("✅ New state: hasStory ", useCallStoryStore.getState().hasStory);
+
             console.log('====================================');
 
             await startCall(friend.uid.trim());
