@@ -1,54 +1,96 @@
-import { useTrackedRouter } from "@/hooks/useTrackedRouter";
-import { screenRatio } from "@/utils/initScreen";
-import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams } from "expo-router";
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { useStoryEditingStore } from "@/store/storyEditingStore"
+import { screenRatio } from "@/utils/initScreen"
+import { LinearGradient } from "expo-linear-gradient"
+import React from "react"
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 export default function Step4_SelectShare() {
-    const params = useLocalSearchParams()
     const router = useTrackedRouter()
 
-    const handleSelectOption = (shareType: string) => {
-        router.push({
-            pathname: "/story/new_story/step4_2_selectChatPeopleOrAI",
-            params: {
-                basicQA: params.basicQA,
-                storyTitle: params.storyTitle,
-                shareType: shareType // "myself" hoặc "me_plus_one"
-            }
+    // Get data from store safely
+    const shareType = useStoryEditingStore((state) => state.shareType)
+    const updateStory = useStoryEditingStore((state) => state.updateStory)
+
+    const resetForNewShareType = (newShareType: "myself" | "me_plus_one") => {
+        updateStory({
+            shareType: newShareType,
+            related_users: [],
+            story_generated_date: new Date(),
+            story_recited_date: new Date(),
+            detail_story: "",
+            sumary_story: "",
+            call_id: "",
+            conversation_id: "",
         })
     }
-    const handleSelectOptionWithOtherPeople = (shareType: string) => {
-        router.push({
-            pathname: "/story/new_story/step5_selectColabType",
-            params: {
-                basicQA: params.basicQA,
-                storyTitle: params.storyTitle,
-                shareType: shareType // "myself" hoặc "me_plus_one"
-            }
-        })
+
+    const handleSelect = (selected: "myself" | "me_plus_one") => {
+        if (selected === shareType) {
+            // Same type → go to next
+            goNext(selected)
+            return
+        }
+
+        // Different type → warn user
+        Alert.alert(
+            "Warning",
+            "If you change the share type, all related data will be reset. Do you want to continue?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+                {
+                    text: "Yes",
+                    onPress: () => {
+                        resetForNewShareType(selected)
+                        goNext(selected)
+                    },
+                },
+            ]
+        )
     }
+
+    const goNext = (selected: "myself" | "me_plus_one") => {
+        if (selected === "myself") {
+            router.push("/story/new_story/step4_2_selectChatPeopleOrAI")
+        } else {
+            router.push("/story/new_story/step5_selectColabType")
+        }
+    }
+
     return (
         <View style={styles.container}>
             <LinearGradient colors={["#FFDCD1", "#ECEBD0"]} style={styles.gradient} />
             <View style={styles.contentWrapper}>
                 <View style={styles.questionContainer}>
-                    <Text style={styles.questionText}>Who would you like to share your story with/tell your story to?</Text>
+                    <Text style={styles.questionText}>
+                        Who would you like to share your story with/tell your story to?
+                    </Text>
                 </View>
 
                 <View style={styles.optionsContainer}>
-                    <TouchableOpacity style={styles.optionButton} onPress={() => handleSelectOption("myself")}>
+                    <TouchableOpacity
+                        style={[
+                            styles.optionButton,
+                            shareType === "myself" && styles.optionButtonActive,
+                        ]}
+                        onPress={() => handleSelect("myself")}
+                    >
                         <Text style={styles.optionText}>Myself</Text>
                         <Image source={require("../../../assets/images/NewUI/myself.png")} />
-
-
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.optionButton} onPress={() => handleSelectOptionWithOtherPeople("me_plus_one")}>
+                    <TouchableOpacity
+                        style={[
+                            styles.optionButton,
+                            shareType === "me_plus_one" && styles.optionButtonActive,
+                        ]}
+                        onPress={() => handleSelect("me_plus_one")}
+                    >
                         <Text style={styles.optionText}>Me plus one</Text>
                         <Image source={require("../../../assets/images/NewUI/meplusone.png")} />
-
                     </TouchableOpacity>
                 </View>
             </View>
@@ -96,9 +138,8 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 32,
     },
-    optionIcon: {
-        fontSize: 30,
-        marginBottom: 10,
+    optionButtonActive: {
+        backgroundColor: "#FEA366", // brighter color
     },
     optionText: {
         color: "white",

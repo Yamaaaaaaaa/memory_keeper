@@ -1,11 +1,54 @@
-import { View, StyleSheet, Text, TouchableOpacity, Image } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { screenRatio } from "@/utils/initScreen";
-import React from "react";
+import { db } from "@/firebase/firebaseConfig";
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { useStoryEditingStore } from "@/store/storyEditingStore";
+import { screenRatio } from "@/utils/initScreen";
+import { LinearGradient } from "expo-linear-gradient";
+import { addDoc, collection } from "firebase/firestore";
+import React from "react";
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Step1_IntroScreen() {
     const router = useTrackedRouter()
+    const updateStory = useStoryEditingStore((state) => state.updateStory);
+    const clearStory = useStoryEditingStore((state) => state.clearStory)
+    const handleCreateNewStory = async () => {
+        try {
+            // 1. Tạo story rỗng trong Firestore
+            const docRef = await addDoc(collection(db, "stories"), {
+                createdAt: new Date(),
+            });
+            clearStory();
+            // 2. Lưu id vào store
+            updateStory({
+                id: docRef.id,
+            });
+
+            // 3. Điều hướng
+            router.push("/story/new_story/step2_initQuestion");
+        } catch (error) {
+            console.error("Error creating story:", error);
+        }
+    };
+    const handleContinue = () => {
+        Alert.alert(
+            "Choose an option",
+            "Do you want to create a new story or edit an existing one?",
+            [
+                {
+                    text: "Create new story",
+                    onPress: handleCreateNewStory,
+                },
+                {
+                    text: "Edit existing story",
+                    onPress: () => {
+                        router.push("/story/new_story/step1_1_chooseStoryToEdit")
+                        clearStory();
+                    },
+                },
+                { text: "Cancel", style: "cancel" }
+            ]
+        )
+    }
 
     return (
         <View style={styles.container}>
@@ -28,7 +71,7 @@ export default function Step1_IntroScreen() {
                     </Text>
                 </View>
 
-                <TouchableOpacity style={styles.continueButton} onPress={() => router.push("/story/new_story/step2_initQuestion")}>
+                <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
                     <Text style={styles.buttonText}>Continue</Text>
                     <Image source={require("../../../assets/images/NewUI/Chev_right.png")} style={styles.arrow} />
                 </TouchableOpacity>

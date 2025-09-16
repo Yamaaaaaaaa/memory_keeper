@@ -1,5 +1,6 @@
 import { auth, db } from "@/firebase/firebaseConfig"
 import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { StoryEditingState, useStoryEditingStore } from "@/store/storyEditingStore"
 import { screenRatio } from "@/utils/initScreen"
 import { LinearGradient } from "expo-linear-gradient"
 import { collection, deleteDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore"
@@ -29,8 +30,8 @@ export default function MyStoriesScreen() {
     const [stories, setStories] = useState<Story[]>([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
-    const [userName, setUserName] = useState("User")
     const router = useTrackedRouter()
+    const uid = auth.currentUser?.uid
 
     // Get progress bar color based on processing value
     const getProgressColor = (processing: number): string => {
@@ -52,33 +53,9 @@ export default function MyStoriesScreen() {
         return {}
     }
 
-    // Load user info
-    const loadUserInfo = async () => {
-        try {
-            const uid = auth.currentUser?.uid
-            if (!uid) {
-                console.log("No authenticated user")
-                return
-            }
-            const userDocRef = doc(db, "users", uid)
-            const userDoc = await getDoc(userDocRef)
-            if (userDoc.exists()) {
-                const userData = userDoc.data()
-                setUserName(userData.username || "Unknown User")
-            } else {
-                console.log("User document not found")
-            }
-        } catch (error) {
-            console.error("Error loading user info:", error)
-        }
-    }
-
     // Load stories from Firebase - SIMPLIFIED VERSION
     const loadStories = async () => {
         try {
-            const uid = auth.currentUser?.uid
-            console.log("Current user ID:", uid)
-
             if (!uid) {
                 console.log("No authenticated user")
                 return
@@ -88,31 +65,21 @@ export default function MyStoriesScreen() {
             const q = query(storiesRef, where("ownerId", "==", uid))
             // const q = collection(db, 'stories');
 
-            console.log("Querying stories for ownerId:", uid)
             const querySnapshot = await getDocs(q)
-            console.log("Query returned", querySnapshot.size, "documents")
 
             const storiesData: Story[] = []
 
             querySnapshot.forEach((docSnapshot) => {
                 const data = docSnapshot.data()
-
-                if (data.conversation_id) {
-                    const story: Story = {
-                        id: docSnapshot.id,
-                        title: data.title || "Untitled Story",
-                        processing: data.processing || 0,
-                        ownerId: data.ownerId || "",
-                        conversation_id: data.conversation_id,
-                    }
-                    storiesData.push(story)
+                const story: Story = {
+                    id: docSnapshot.id,
+                    title: data.title || "Untitled Story",
+                    processing: data.processing || 0,
+                    ownerId: data.ownerId || "",
+                    conversation_id: data.conversation_id,
                 }
+                storiesData.push(story)
             })
-
-            // console.log("Total stories loaded:", storiesData.length)
-            // console.log("Final stories array:", storiesData)
-
-            // Không cần sort vì không có date field
             setStories(storiesData)
         } catch (error) {
             console.error("Error loading stories:", error)
@@ -128,22 +95,67 @@ export default function MyStoriesScreen() {
         loadStories()
     }
 
-    // Handle story press
-    const handleStoryPress = (story: Story) => {
-        console.log("Story pressed:", story.title)
-        router.push(`/story/${story.id}`)
-        // Navigate to story detail or edit
-    }
 
-    // Handle new story press
-    const handleNewStory = () => {
-        router.push("/story/new_story/step1_intro")
-    }
+    // Hàm lấy và map thẳng vào store
+    const getStoryByIdAndMap = async (storyId: string) => {
+        const docRef = doc(db, "stories", storyId)
+        const docSnap = await getDoc(docRef)
 
-    // Handle edit profile
-    const handleEditProfile = () => {
-        console.log("Edit profile")
-        // Navigate to profile edit
+        if (!docSnap.exists()) {
+            console.log("Story not found")
+            return null
+        }
+
+        const data = docSnap.data() as any
+        // map thẳng sang store
+        const mapped: Partial<StoryEditingState> = {
+            id: docSnap.id,
+            typeStory: data.typeContact ?? "chat",
+            ownerId: data.ownerId ?? "",
+            processing: data.processing ?? 0,
+            related_users: data.related_users ?? [],
+            shareType: data.shareType ?? "myself",
+            story_generated_date: data.story_generated_date
+                ? new Date(data.story_generated_date)
+                : new Date(),
+            story_recited_date: data.story_recited_date
+                ? new Date(data.story_recited_date)
+                : new Date(),
+            detail_story: data.detail_story ?? "",
+            sumary_story: data.summaryStory ?? "",
+            title: data.title ?? "",
+            call_id: data.callId ?? "",
+            conversation_id: data.conversation_id ?? "",
+        }
+
+        // 🔹 Load initQuestions subcollection
+        const initQRef = collection(db, "stories", storyId, "initQuestions")
+        const initQSnap = await getDocs(initQRef)
+        const initQuestions = initQSnap.docs.map((qDoc) => {
+            const qData = qDoc.data()
+            return {
+                id: qDoc.id,
+                question: qData.question ?? "",
+                answer: qData.answer ?? "",
+            }
+        })
+
+        // Bạn có 2 cách:
+        // 1. Nếu muốn nhét thẳng vào store: thêm field initQuestions vào store
+        // 2. Nếu chỉ cần trả ra cho màn hình: trả cùng mapped
+
+        // Giả sử ta mở rộng store để chứa luôn initQuestions
+        useStoryEditingStore.getState().updateStory({
+            ...mapped,
+            initQuestions,
+        } as any)
+        console.log("{ ...mapped, initQuestions }", { ...mapped, initQuestions });
+
+        return { ...mapped, initQuestions }
+    }
+    const handleStoryPress = async (story: Story) => {
+        await getStoryByIdAndMap(story.id)
+        router.push("/story/new_story/step2_initQuestion")
     }
 
     const handleDeleteStory = async (story: Story) => {
@@ -166,8 +178,8 @@ export default function MyStoriesScreen() {
     }
 
     useEffect(() => {
-        loadUserInfo()
         loadStories()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     if (loading) {
@@ -188,12 +200,7 @@ export default function MyStoriesScreen() {
             <View style={styles.contentWrapper}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.userInfo} onPress={handleEditProfile}>
-                        <Text style={styles.byText}>By {userName}</Text>
-                        <View style={styles.editIcon}>
-                            <Image source={require("../../assets/images/NewUI/pen.png")} style={styles.editIconText}></Image>
-                        </View>
-                    </TouchableOpacity>
+                    <Text style={styles.byText}>Select a Story to Edit</Text>
                 </View>
 
                 {/* Stories Title */}
@@ -252,7 +259,7 @@ export default function MyStoriesScreen() {
                                         </Text>
                                         <View style={styles.storyEditIcon}>
                                             <Image
-                                                source={require("../../assets/images/NewUI/pen_white.png")}
+                                                source={require("../../../assets/images/NewUI/pen_white.png")}
                                                 style={styles.editIconText}
                                             ></Image>
                                         </View>
@@ -262,17 +269,6 @@ export default function MyStoriesScreen() {
                         )}
                     </View>
                 </ScrollView>
-
-                {/* New Story Button */}
-                <TouchableOpacity style={styles.newStoryButton} onPress={handleNewStory} activeOpacity={0.8}>
-                    <Text style={styles.newStoryText}>A new story</Text>
-                    <View style={styles.newStoryIcon}>
-                        <Image
-                            source={require("../../assets/images/NewUI/icon new stories.png")}
-                            style={styles.editIconText}
-                        ></Image>
-                    </View>
-                </TouchableOpacity>
             </View>
         </View>
     )
@@ -293,6 +289,7 @@ const styles = StyleSheet.create({
         width: "100%",
         flex: 1,
         paddingHorizontal: 36,
+        paddingBottom: 140,
     },
     loadingContainer: {
         flex: 1,

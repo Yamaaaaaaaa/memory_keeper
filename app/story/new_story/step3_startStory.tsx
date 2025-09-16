@@ -1,31 +1,16 @@
-import { View, StyleSheet, Text, TouchableOpacity, Image } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { useLocalSearchParams } from "expo-router"
-import React from "react";
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { useStoryEditingStore } from "@/store/storyEditingStore";
+import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Step3_StartStory() {
-    const params = useLocalSearchParams()
-    const storyTitle = params.storyTitle as string || "Untitled Story"
+    const storyTitle = useStoryEditingStore.getState().title || "Untitled Story"
     const router = useTrackedRouter()
 
     const handleStartStory = () => {
         router.push({
             pathname: "/story/new_story/step4_selectShareStories",
-            params: {
-                basicQA: params.basicQA,
-                storyTitle: params.storyTitle
-            }
-        })
-    }
-
-    const handleSkipToGenerate = () => {
-        router.push({
-            pathname: "/story/new_story/step6_generateScreen",
-            params: {
-                basicQA: params.basicQA,
-                storyTitle: params.storyTitle
-            }
         })
     }
 
@@ -34,28 +19,34 @@ export default function Step3_StartStory() {
             <LinearGradient colors={["#FFDCD1", "#ECEBD0"]} style={styles.gradient} />
             <View style={styles.contentWrapper}>
                 <View style={styles.headerContainer}>
-                    <Text style={styles.headerText}>{storyTitle}</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{
+                            alignItems: "center",
+                        }}
+                    >
+                        <Text style={styles.headerText} >{storyTitle}</Text>
+                    </ScrollView>
                     <Image source={require("../../../assets/images/NewUI/pen.png")} style={styles.headerIcon} />
                 </View>
+
                 <View style={styles.iconContainer}>
                     <View style={styles.glowCircle}>
                         <Image source={require("../../../assets/images/NewUI/Group 71.png")} style={styles.iconImage} />
                     </View>
                 </View>
+
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.startButton} onPress={handleStartStory}>
                         <Text style={styles.startButtonText}>Start story</Text>
                     </TouchableOpacity>
-                    {/* <TouchableOpacity style={styles.startButton} onPress={handleSkipToGenerate}>
-                        <Text style={styles.startButtonText}>Skip to Generate</Text>
-                    </TouchableOpacity> */}
                 </View>
             </View>
         </View>
     )
 }
 
-// styles remain the same...
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -76,6 +67,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 125,
+        maxWidth: "100%",
     },
     headerText: {
         fontSize: 28,
@@ -85,6 +77,7 @@ const styles = StyleSheet.create({
     headerIcon: {
         width: 20,
         height: 20,
+        marginLeft: 10,
     },
     iconContainer: {
         alignItems: "center",

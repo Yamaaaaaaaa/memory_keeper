@@ -5,6 +5,7 @@ export default function StepCreateStoriesLayout() {
     return (
         <Stack>
             <Stack.Screen name="step1_intro" options={{ headerShown: false }} />
+            <Stack.Screen name="step1_1_chooseStoryToEdit" options={{ headerShown: false }} />
             <Stack.Screen name="step2_initQuestion" options={{ headerShown: false }} />
             <Stack.Screen name="step3_startStory" options={{ headerShown: false }} />
             <Stack.Screen name="step4_selectShareStories" options={{ headerShown: false }} />
