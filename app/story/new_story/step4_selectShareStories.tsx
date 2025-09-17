@@ -13,16 +13,29 @@ export default function Step4_SelectShare() {
     const updateStory = useStoryEditingStore((state) => state.updateStory)
 
     const resetForNewShareType = (newShareType: "myself" | "me_plus_one") => {
-        updateStory({
-            shareType: newShareType,
-            related_users: [],
-            story_generated_date: new Date(),
-            story_recited_date: new Date(),
-            detail_story: "",
-            sumary_story: "",
-            call_id: "",
-            conversation_id: "",
-        })
+        if (newShareType === "myself")
+            updateStory({
+                shareType: newShareType,
+                related_users: [],
+                story_generated_date: new Date(),
+                story_recited_date: new Date(),
+                detail_story: "",
+                sumary_story: "",
+                call_id: "",
+                conversation_id: "",
+                typeStory: "chat",
+            })
+        else
+            updateStory({
+                shareType: newShareType,
+                related_users: [],
+                story_generated_date: new Date(),
+                story_recited_date: new Date(),
+                detail_story: "",
+                sumary_story: "",
+                call_id: "",
+                conversation_id: "",
+            })
     }
 
     const handleSelect = (selected: "myself" | "me_plus_one") => {
@@ -149,3 +162,16 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
 })
+
+
+
+
+
+
+
+
+
+
+
+
+

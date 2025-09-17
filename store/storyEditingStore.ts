@@ -1,11 +1,29 @@
+// store/storyEditingStore.ts
 import { create } from "zustand";
+
 type StoryType = "chat" | "call";
 type ShareType = "myself" | "me_plus_one";
+
 export interface InitQuestion {
   id: string;
   question: string;
   answer: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  message_time: string; // ISO string
+  speaker: string; // "bot" or userId
+  speech: string;
+}
+
+export interface Conversation {
+  id: string;
+  conversation_start_date: string; // ISO string
+  participants: string[];
+  messages: ChatMessage[];
+}
+
 export interface StoryEditingState {
   id: string;
   typeStory: StoryType;
@@ -23,9 +41,16 @@ export interface StoryEditingState {
   call_id: string;
   conversation_id: string;
 
-  // setter
+  // now single conversation per story
+  conversation: Conversation | null;
+
+  // setters
   updateStory: (partial: Partial<StoryEditingState>) => void;
   clearStory: () => void;
+
+  // conversation setters
+  setConversation: (conv: Conversation) => void;
+  clearConversation: () => void;
 }
 
 export const useStoryEditingStore = create<StoryEditingState>((set) => ({
@@ -44,6 +69,7 @@ export const useStoryEditingStore = create<StoryEditingState>((set) => ({
   call_id: "",
   conversation_id: "",
   initQuestions: [],
+  conversation: null,
 
   updateStory: (partial) =>
     set((state) => ({
@@ -52,6 +78,7 @@ export const useStoryEditingStore = create<StoryEditingState>((set) => ({
         Object.entries(partial).filter(([_, v]) => v !== undefined)
       ),
     })),
+
   clearStory: () =>
     set({
       id: "",
@@ -68,5 +95,18 @@ export const useStoryEditingStore = create<StoryEditingState>((set) => ({
       call_id: "",
       conversation_id: "",
       initQuestions: [],
+      conversation: null,
+    }),
+
+  setConversation: (conv) =>
+    set((state) => ({
+      conversation: conv,
+      conversation_id: conv.id, // keep conversation_id in story as well
+    })),
+
+  clearConversation: () =>
+    set({
+      conversation: null,
+      conversation_id: "",
     }),
 }));

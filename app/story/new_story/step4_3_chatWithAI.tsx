@@ -1,15 +1,16 @@
+import { auth } from "@/firebase/firebaseConfig"
 import { useTrackedRouter } from "@/hooks/useTrackedRouter"
+import { useStoryEditingStore } from "@/store/storyEditingStore"
 import { screenRatio } from "@/utils/initScreen"
 import axios from "axios"
 import { LinearGradient } from "expo-linear-gradient"
-import { useLocalSearchParams } from "expo-router"
 import React, { useEffect, useRef, useState } from "react"
 import {
     ActivityIndicator,
     FlatList,
-    Image,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -17,81 +18,63 @@ import {
     View
 } from "react-native"
 
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_API_KEY;
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_API_KEY
 
 interface Message {
     id: string
-    type: 'question' | 'answer' | 'summary'
+    type: "question" | "answer" | "summary"
     content: string
     timestamp: Date
-    speaker: string // 'bot' hoặc user ID
+    speaker: string // 'bot' or user ID
 }
 
 export default function Step4_3_ChatWithAI() {
-    const params = useLocalSearchParams()
     const router = useTrackedRouter()
+    const flatListRef = useRef<FlatList>(null)
+
+    const {
+        initQuestions,
+        title,
+        shareType: storeShareType,
+        setConversation,   // thêm từ store
+    } = useStoryEditingStore()
+
     const [messages, setMessages] = useState<Message[]>([])
     const [currentAnswer, setCurrentAnswer] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false)
-    const [storyTitle, setStoryTitle] = useState(params.storyTitle as string || "Untitled Story")
-    const [shareType, setShareType] = useState("")
-    const flatListRef = useRef<FlatList>(null)
+    const [storyTitle, setStoryTitle] = useState(title || "Untitled Story")
+    const [shareType, setShareType] = useState(storeShareType || "")
 
-    // Giả sử user ID - trong thực tế sẽ lấy từ auth
-    const currentUserId = "y5iDLqAakZVHf3xFEd22HlrScTD3"
+    const currentUserId = auth.currentUser?.uid
 
     useEffect(() => {
-        const initializeChat = async () => {
+        const initializeChat = () => {
             let initialMessages: Message[] = []
-            let previousQA = []
 
-            if (params.storyTitle) {
-                setStoryTitle(params.storyTitle as string)
-            }
-            if (params.shareType) {
-                setShareType(params.shareType as string)
-            }
+            if (initQuestions && initQuestions.length > 0) {
+                const summaryContent = initQuestions
+                    .map((qa) => `• ${qa.question}\n  → ${qa.answer}`)
+                    .join("\n\n")
 
-            if (params.previousQA) {
-                try {
-                    previousQA = JSON.parse(params.previousQA as string)
-
-                    const summaryContent = previousQA.map((qa: any) =>
-                        `• ${qa.question}\n  → ${qa.answer}`
-                    ).join('\n\n')
-
-                    const summaryMessage: Message = {
-                        id: 'summary',
-                        type: 'summary',
-                        content: `Your story so far:\n\n${summaryContent}`,
-                        timestamp: new Date(),
-                        speaker: 'bot'
-                    }
-                    initialMessages.push(summaryMessage)
-
-                    setMessages(initialMessages)
-                    generateFollowUpQuestion(initialMessages, previousQA)
-
-                } catch (error) {
-                    console.error("Error parsing previous Q&A:", error)
-                    const basicQuestion: Message = {
-                        id: 'basic-q',
-                        type: 'question',
-                        content: "Let's explore your story more deeply. What emotions were you feeling during the main events?",
-                        timestamp: new Date(),
-                        speaker: 'bot'
-                    }
-                    setMessages([basicQuestion])
-                    setIsWaitingForAnswer(true)
+                const summaryMessage: Message = {
+                    id: "summary",
+                    type: "summary",
+                    content: `Your story so far:\n\n${summaryContent}`,
+                    timestamp: new Date(),
+                    speaker: "bot",
                 }
+                initialMessages.push(summaryMessage)
+                setMessages(initialMessages)
+                generateFollowUpQuestion(initialMessages, initQuestions)
             } else {
                 const firstQuestion: Message = {
-                    id: 'first-q',
-                    type: 'question',
-                    content: "Let's begin exploring your story. What would you like to tell me about?",
+                    id: "first-q",
+                    type: "question",
+                    content:
+                        "Let's begin exploring your story. What would you like to tell me about?",
                     timestamp: new Date(),
-                    speaker: 'bot'
+                    speaker: "bot",
                 }
                 setMessages([firstQuestion])
                 setIsWaitingForAnswer(true)
@@ -99,23 +82,28 @@ export default function Step4_3_ChatWithAI() {
         }
 
         initializeChat()
-    }, [params.previousQA, params.storyTitle, params.shareType])
+    }, [initQuestions, title, storeShareType])
 
-    const generateFollowUpQuestion = async (currentMessages: Message[], previousQA?: any[]) => {
+    const generateFollowUpQuestion = async (
+        currentMessages: Message[],
+        baseQA?: any[]
+    ) => {
         setIsLoading(true)
-
         try {
             let contextInfo = ""
-            if (previousQA && previousQA.length > 0) {
-                contextInfo = previousQA.map(qa => `${qa.question}: ${qa.answer}`).join('\n')
+            if (baseQA && baseQA.length > 0) {
+                contextInfo = baseQA.map((qa) => `${qa.question}: ${qa.answer}`).join("\n")
             }
 
             const systemMessage = {
                 role: "system",
                 content: `You are Memory Keeper, a warm and empathetic AI assistant helping users develop their personal stories and memories.
 
-Story Title: "${params.storyTitle || 'Untitled Story'}"
-Sharing Context: ${shareType === 'myself' ? 'User wants to tell this story to themselves' : 'User wants to share this story with someone else'}
+Story Title: "${storyTitle}"
+Sharing Context: ${shareType === "myself"
+                        ? "User wants to tell this story to themselves"
+                        : "User wants to share this story with someone else"
+                    }
 
 Context from their basic story information:
 ${contextInfo}
@@ -126,22 +114,15 @@ Your role:
 - Ask only ONE specific question at a time
 - Keep questions warm, encouraging, and easy to understand
 - Help them explore the deeper meaning and impact of their story
-- Don't repeat information they've already shared
-
-Question types to explore:
-- Emotional aspects: How did you feel? What emotions do you remember?
-- Sensory details: What did you see, hear, smell, taste, or touch?
-- Relationships: How did others react? What did they say or do?
-- Significance: Why is this memory important to you? How did it change you?
-- Context: What was happening in your life at that time?`,
+- Don't repeat information they've already shared`,
             }
 
             const conversationMessages = currentMessages
-                .filter(msg => msg.type !== 'summary')
+                .filter((msg) => msg.type !== "summary")
                 .slice(-6)
-                .map(msg => ({
-                    role: msg.type === 'question' ? 'assistant' : 'user',
-                    content: msg.content
+                .map((msg) => ({
+                    role: msg.type === "question" ? "assistant" : "user",
+                    content: msg.content,
                 }))
 
             const response = await axios.post(
@@ -165,36 +146,33 @@ Question types to explore:
 
             const newQuestion: Message = {
                 id: `ai-q-${Date.now()}`,
-                type: 'question',
+                type: "question",
                 content: aiQuestion,
                 timestamp: new Date(),
-                speaker: 'bot'
+                speaker: "bot",
             }
 
-            setMessages(prev => [...prev, newQuestion])
+            setMessages((prev) => [...prev, newQuestion])
             setIsWaitingForAnswer(true)
-
         } catch (error) {
             console.error("Error generating question:", error)
-
             const fallbackQuestions = [
                 "Can you describe what you were feeling during that moment?",
                 "What details do you remember most vividly about that experience?",
                 "How did the people around you react to what was happening?",
                 "What made this moment particularly meaningful to you?",
-                "Can you tell me more about the setting where this took place?"
+                "Can you tell me more about the setting where this took place?",
             ]
-
-            const randomFallback = fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)]
-
+            const randomFallback =
+                fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)]
             const fallbackQuestion: Message = {
                 id: `fallback-q-${Date.now()}`,
-                type: 'question',
+                type: "question",
                 content: randomFallback,
                 timestamp: new Date(),
-                speaker: 'bot'
+                speaker: "bot",
             }
-            setMessages(prev => [...prev, fallbackQuestion])
+            setMessages((prev) => [...prev, fallbackQuestion])
             setIsWaitingForAnswer(true)
         } finally {
             setIsLoading(false)
@@ -206,10 +184,10 @@ Question types to explore:
 
         const newAnswer: Message = {
             id: `user-a-${Date.now()}`,
-            type: 'answer',
+            type: "answer",
             content: currentAnswer.trim(),
             timestamp: new Date(),
-            speaker: currentUserId
+            speaker: currentUserId || "user",
         }
 
         const updatedMessages = [...messages, newAnswer]
@@ -222,72 +200,58 @@ Question types to explore:
         }, 1500)
     }
 
-    const handleCreateStory = () => {
-        const originalQA = params.previousQA ? JSON.parse(params.previousQA as string) : []
+    const handleContinue = () => {
+        if (!messages.length) return
 
-        const chatMessages = messages.filter(msg => msg.type !== 'summary')
-        const chatQA = []
-
-        for (let i = 0; i < chatMessages.length; i++) {
-            const currentMsg = chatMessages[i]
-            const nextMsg = chatMessages[i + 1]
-
-            if (currentMsg.type === 'question' && nextMsg && nextMsg.type === 'answer') {
-                chatQA.push({
-                    question: currentMsg.content,
-                    answer: nextMsg.content,
-                    questionTime: currentMsg.timestamp.toISOString(),
-                    answerTime: nextMsg.timestamp.toISOString()
-                })
-                i++
-            }
+        const convId = `conv-${Date.now()}`
+        const conv = {
+            id: convId,
+            conversation_start_date: messages[0].timestamp.toISOString(),
+            participants: Array.from(
+                new Set(messages.map(m => m.speaker))
+            ),
+            messages: messages.map(m => ({
+                id: m.id,
+                message_time: m.timestamp.toISOString(),
+                speaker: m.speaker,
+                speech: m.content,
+            })),
         }
 
-        const allQA = [...originalQA, ...chatQA]
+        // lưu vào store
+        setConversation(conv)
 
-        // Prepare messages for Firebase
-        const allMessages = messages.map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            speaker: msg.speaker,
-            message_time: msg.timestamp.toISOString(),
-            type: msg.type
-        }))
-
-        console.log("=== CREATING STORY ===")
-        console.log("All Messages with timestamps:", allMessages)
-        console.log("All Q&A:", allQA)
-        console.log("=== END ===")
-
-        router.push({
-            pathname: "/story/new_story/step6_generateScreen",
-            params: {
-                finalQA: JSON.stringify(allQA),
-                allMessages: JSON.stringify(allMessages),
-                storyTitle: storyTitle,
-                shareType: params.shareType,
-                totalQuestions: allQA.length.toString(),
-                basicQuestions: originalQA.length.toString(),
-                followUpQuestions: chatQA.length.toString()
-            }
-        })
+        // điều hướng sang step6
+        router.push("/story/new_story/step6_generateScreen")
     }
 
     const renderMessage = ({ item }: { item: Message }) => (
-        <View style={[
-            styles.messageContainer,
-            item.type === 'answer' ? styles.answerContainer : styles.questionContainer
-        ]}>
-            <View style={[
-                styles.messageBubble,
-                item.type === 'answer' ? styles.answerBubble :
-                    item.type === 'summary' ? styles.summaryBubble : styles.questionBubble
-            ]}>
-                <Text style={[
-                    styles.messageText,
-                    item.type === 'answer' ? styles.answerText :
-                        item.type === 'summary' ? styles.summaryText : styles.questionText
-                ]}>
+        <View
+            style={[
+                styles.messageContainer,
+                item.type === "answer" ? styles.answerContainer : styles.questionContainer,
+            ]}
+        >
+            <View
+                style={[
+                    styles.messageBubble,
+                    item.type === "answer"
+                        ? styles.answerBubble
+                        : item.type === "summary"
+                            ? styles.summaryBubble
+                            : styles.questionBubble,
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.messageText,
+                        item.type === "answer"
+                            ? styles.answerText
+                            : item.type === "summary"
+                                ? styles.summaryText
+                                : styles.questionText,
+                    ]}
+                >
                     {item.content}
                 </Text>
             </View>
@@ -297,24 +261,30 @@ Question types to explore:
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
             <LinearGradient colors={["#FFDCD1", "#ECEBD0"]} style={styles.gradient} />
 
             <View style={styles.headerContainer}>
                 <View style={styles.headerRow}>
-                    <View style={styles.headerLeft}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={{ flex: 1 }}
+                    >
                         {storyTitle && (
-                            <TextInput style={styles.headerText} numberOfLines={1}>{storyTitle}</TextInput>
+                            <TextInput
+                                style={styles.headerText}
+                                numberOfLines={1}
+                                editable={false}
+                            >
+                                {storyTitle}
+                            </TextInput>
                         )}
-                        <Image source={require("../../../assets/images/NewUI/pen.png")} style={styles.headerIcon} />
-                    </View>
-
-                    <TouchableOpacity style={styles.createButton} onPress={handleCreateStory}>
-                        <View style={styles.createButtonContent}>
-                            <Text style={styles.createButtonText}>Create</Text>
-                        </View>
+                    </ScrollView>
+                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
+                        <Text style={styles.continueButtonText}>Continue</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -326,7 +296,9 @@ Question types to explore:
                 keyExtractor={(item) => item.id}
                 style={styles.chatContainer}
                 contentContainerStyle={styles.chatContent}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                onContentSizeChange={() =>
+                    flatListRef.current?.scrollToEnd({ animated: true })
+                }
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 showsVerticalScrollIndicator={false}
             />
@@ -350,7 +322,10 @@ Question types to explore:
                         maxLength={1000}
                     />
                     <TouchableOpacity
-                        style={[styles.sendButton, !currentAnswer.trim() && styles.sendButtonDisabled]}
+                        style={[
+                            styles.sendButton,
+                            !currentAnswer.trim() && styles.sendButtonDisabled,
+                        ]}
                         onPress={handleSendAnswer}
                         disabled={!currentAnswer.trim()}
                     >
@@ -362,192 +337,38 @@ Question types to explore:
     )
 }
 
-// Styles remain the same as previous version...
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    gradient: {
-        ...StyleSheet.absoluteFillObject,
-        zIndex: 0,
-    },
-    headerContainer: {
-        paddingTop: screenRatio >= 2 ? 60 : 40,
-        paddingBottom: 10,
-        paddingHorizontal: 20,
-        zIndex: 2,
-    },
-    headerRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    headerLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        flex: 1,
-    },
-    headerText: {
-        fontSize: 24,
-        fontFamily: "Alberts",
-        marginRight: 10,
-        color: "#333",
-    },
-    headerIcon: {
-        width: 20,
-        height: 20,
-    },
-    createButton: {
+    container: { flex: 1 },
+    gradient: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
+    headerContainer: { paddingTop: 40, paddingBottom: 10, paddingHorizontal: 20, zIndex: 2 },
+    headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    headerText: { fontSize: 24, fontFamily: "Alberts", marginRight: 10, color: "#333" },
+    continueButton: {
         backgroundColor: "#4A4A4A",
-        borderRadius: 25,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    createButtonContent: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    createButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontFamily: "Alberts",
-        fontWeight: '600',
-    },
-    storyTitle: {
-        fontSize: 18,
-        fontFamily: "Alberts",
-        color: "#333",
-        textAlign: "center",
-        marginTop: 4,
-        fontWeight: "600",
-    },
-    shareTypeText: {
-        fontSize: 14,
-        fontFamily: "Alberts",
-        color: "#666",
-        textAlign: "center",
-        marginTop: 4,
-        fontStyle: "italic",
-    },
-    chatContainer: {
-        flex: 1,
-        paddingHorizontal: 20,
-        zIndex: 2,
-    },
-    chatContent: {
-        paddingBottom: 20,
-    },
-    messageContainer: {
-        marginVertical: 8,
-    },
-    questionContainer: {
-        alignItems: 'flex-start',
-    },
-    answerContainer: {
-        alignItems: 'flex-end',
-    },
-    messageBubble: {
-        maxWidth: '85%',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 20,
-    },
-    questionBubble: {
-        backgroundColor: '#66621C',
-        borderRadius: 15,
-        borderBottomLeftRadius: 0,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    answerBubble: {
-        backgroundColor: '#FFFEDD',
-        borderRadius: 15,
-        padding: 20,
-        borderBottomRightRadius: 0,
-    },
-    summaryBubble: {
-        backgroundColor: '#F0F8FF',
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        minWidth: '85%',
-        maxWidth: '85%',
-    },
-    messageText: {
-        fontSize: 16,
-        lineHeight: 22,
-    },
-    questionText: {
-        color: 'white',
-        fontSize: screenRatio >= 2 ? 18 : 16,
-        fontFamily: "Judson",
-    },
-    answerText: {
-        fontSize: screenRatio >= 2 ? 18 : 16,
-        fontFamily: "Judson",
-    },
-    summaryText: {
-        color: '#555555',
-        fontFamily: 'Alberts',
-        fontSize: 14,
-    },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 15,
-        zIndex: 2,
-    },
-    loadingText: {
-        marginLeft: 8,
-        fontSize: screenRatio >= 2 ? 18 : 16,
-        fontFamily: "Alberts",
-        color: '#4A4A4A',
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        alignItems: 'center',
-        zIndex: 2,
-    },
-    textInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
         borderRadius: 20,
         paddingHorizontal: 15,
-        paddingVertical: 12,
-        marginRight: 10,
-        maxHeight: 120,
-        backgroundColor: '#FFFFFF',
-        fontSize: 16,
-        color: '#333',
+        paddingVertical: 8,
+        marginLeft: 10,
     },
-    sendButton: {
-        backgroundColor: '#4A4A4A',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    sendButtonDisabled: {
-        backgroundColor: '#CCCCCC',
-    },
-    sendButtonText: {
-        color: '#FFFFFF',
-        fontSize: screenRatio >= 2 ? 18 : 16,
-        fontFamily: "Alberts",
-        fontWeight: '600',
-    },
+    continueButtonText: { color: "#fff", fontSize: 14, fontFamily: "Alberts" },
+    chatContainer: { flex: 1, paddingHorizontal: 20, zIndex: 2 },
+    chatContent: { paddingBottom: 20 },
+    messageContainer: { marginVertical: 8 },
+    questionContainer: { alignItems: "flex-start" },
+    answerContainer: { alignItems: "flex-end" },
+    messageBubble: { maxWidth: "85%", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20 },
+    questionBubble: { backgroundColor: "#66621C", borderRadius: 15, borderBottomLeftRadius: 0 },
+    answerBubble: { backgroundColor: "#FFFEDD", borderRadius: 15, padding: 20, borderBottomRightRadius: 0 },
+    summaryBubble: { backgroundColor: "#F0F8FF", borderRadius: 15, borderWidth: 1, borderColor: "#E0E0E0", minWidth: "85%", maxWidth: "85%" },
+    messageText: { fontSize: 16, lineHeight: 22 },
+    questionText: { color: "white", fontSize: screenRatio >= 2 ? 18 : 16, fontFamily: "Judson" },
+    answerText: { fontSize: screenRatio >= 2 ? 18 : 16, fontFamily: "Judson" },
+    summaryText: { color: "#555", fontFamily: "Alberts", fontSize: 14 },
+    loadingContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 15, zIndex: 2 },
+    loadingText: { marginLeft: 8, fontSize: screenRatio >= 2 ? 18 : 16, fontFamily: "Alberts", color: "#4A4A4A" },
+    inputContainer: { flexDirection: "row", paddingHorizontal: 20, paddingVertical: 15, backgroundColor: "rgba(255,255,255,0.95)", alignItems: "center", zIndex: 2 },
+    textInput: { flex: 1, borderWidth: 1, borderColor: "#E0E0E0", borderRadius: 20, paddingHorizontal: 15, paddingVertical: 12, marginRight: 10, maxHeight: 120, backgroundColor: "#fff", fontSize: 16, color: "#333" },
+    sendButton: { backgroundColor: "#4A4A4A", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 20, justifyContent: "center", alignItems: "center" },
+    sendButtonDisabled: { backgroundColor: "#CCC" },
+    sendButtonText: { color: "#fff", fontSize: screenRatio >= 2 ? 18 : 16, fontFamily: "Alberts", fontWeight: "600" },
 })

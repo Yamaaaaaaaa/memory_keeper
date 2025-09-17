@@ -1,5 +1,6 @@
 import { useTrackedRouter } from "@/hooks/useTrackedRouter"
 import { useCallStoryStore } from "@/store/callStoryStore"
+import { useStoryEditingStore } from "@/store/storyEditingStore"
 import { screenRatio } from "@/utils/initScreen"
 import { LinearGradient } from "expo-linear-gradient"
 import { useLocalSearchParams } from "expo-router"
@@ -10,7 +11,7 @@ export default function Step6_Generate() {
     const params = useLocalSearchParams()
     const router = useTrackedRouter()
     const { hasStory } = useCallStoryStore.getState();
-
+    const { conversation } = useStoryEditingStore.getState();
     useEffect(() => {
         // console.log("=== STEP6 GENERATE PARAMS ===")
         // console.log("All params:", params)
@@ -19,7 +20,9 @@ export default function Step6_Generate() {
         // console.log("Total Questions:", params.totalQuestions)
         // console.log("Basic Questions:", params.basicQuestions)
         // console.log("Follow Up Questions:", params.followUpQuestions)
-
+        console.log('====================================');
+        console.log("conversation", conversation);
+        console.log('====================================');
         if (params.finalQA) {
             try {
                 const finalQA = JSON.parse(params.finalQA as string)
