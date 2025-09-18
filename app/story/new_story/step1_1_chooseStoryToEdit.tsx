@@ -106,28 +106,28 @@ export default function MyStoriesScreen() {
             return null
         }
 
+
         const data = docSnap.data() as any
         // map thẳng sang store
         const mapped: Partial<StoryEditingState> = {
             id: docSnap.id,
-            typeStory: data.typeContact ?? "chat",
+            typeStory: data.typeStory ?? "chat",
             ownerId: data.ownerId ?? "",
             processing: data.processing ?? 0,
             related_users: data.related_users ?? [],
             shareType: data.shareType ?? "myself",
             story_generated_date: data.story_generated_date
-                ? new Date(data.story_generated_date)
-                : new Date(),
+                ? data.story_generated_date
+                : new Date().toISOString(),
             story_recited_date: data.story_recited_date
-                ? new Date(data.story_recited_date)
-                : new Date(),
+                ? data.story_recited_date
+                : new Date().toISOString(),
             detail_story: data.detail_story ?? "",
             sumary_story: data.summaryStory ?? "",
             title: data.title ?? "",
-            call_id: data.callId ?? "",
+            call_id: data.call_id ?? "",
             conversation_id: data.conversation_id ?? "",
         }
-
         // 🔹 Load initQuestions subcollection
         const initQRef = collection(db, "stories", storyId, "initQuestions")
         const initQSnap = await getDocs(initQRef)
@@ -149,7 +149,6 @@ export default function MyStoriesScreen() {
             ...mapped,
             initQuestions,
         } as any)
-        console.log("{ ...mapped, initQuestions }", { ...mapped, initQuestions });
 
         return { ...mapped, initQuestions }
     }
