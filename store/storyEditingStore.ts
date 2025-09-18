@@ -12,14 +12,14 @@ export interface InitQuestion {
 
 export interface ChatMessage {
   id: string;
-  message_time: string; // ISO string
+  messageTime: string; // ISO string
   speaker: string; // "bot" or userId
   speech: string;
 }
 
 export interface Conversation {
-  id: string;
-  conversation_start_date: string; // ISO string
+  id?: string;
+  conversationStartDate: string; // ISO string
   participants: string[];
   messages: ChatMessage[];
 }
@@ -29,17 +29,17 @@ export interface StoryEditingState {
   typeStory: StoryType;
   ownerId: string;
   processing: number;
-  related_users: string[];
+  relatedUsers: string[];
   shareType: ShareType;
-  story_generated_date: Date;
-  story_recited_date: Date;
-  detail_story: string;
-  sumary_story: string;
+  storyGeneratedDate: string;
+  storyRecitedDate: string;
+  detailStory: string;
+  sumaryStory: string;
   title: string;
   initQuestions: InitQuestion[];
 
-  call_id: string;
-  conversation_id: string;
+  callId: string;
+  conversationId: string;
 
   // now single conversation per story
   conversation: Conversation | null;
@@ -58,16 +58,16 @@ export const useStoryEditingStore = create<StoryEditingState>((set) => ({
   typeStory: "chat",
   ownerId: "",
   processing: 0,
-  related_users: [],
+  relatedUsers: [],
   shareType: "myself",
-  story_generated_date: new Date(),
-  story_recited_date: new Date(),
-  detail_story: "",
-  sumary_story: "",
+  storyGeneratedDate: new Date().toISOString(),
+  storyRecitedDate: new Date().toISOString(),
+  detailStory: "",
+  sumaryStory: "",
   title: "",
 
-  call_id: "",
-  conversation_id: "",
+  callId: "",
+  conversationId: "",
   initQuestions: [],
   conversation: null,
 
@@ -85,15 +85,15 @@ export const useStoryEditingStore = create<StoryEditingState>((set) => ({
       typeStory: "chat",
       ownerId: "",
       processing: 0,
-      related_users: [],
+      relatedUsers: [],
       shareType: "myself",
-      story_generated_date: new Date(),
-      story_recited_date: new Date(),
-      detail_story: "",
-      sumary_story: "",
+      storyGeneratedDate: new Date().toISOString(),
+      storyRecitedDate: new Date().toISOString(),
+      detailStory: "",
+      sumaryStory: "",
       title: "",
-      call_id: "",
-      conversation_id: "",
+      callId: "",
+      conversationId: "",
       initQuestions: [],
       conversation: null,
     }),
@@ -101,12 +101,12 @@ export const useStoryEditingStore = create<StoryEditingState>((set) => ({
   setConversation: (conv) =>
     set((state) => ({
       conversation: conv,
-      conversation_id: conv.id, // keep conversation_id in story as well
+      conversationId: conv.id, // keep conversation_id in story as well
     })),
 
   clearConversation: () =>
     set({
       conversation: null,
-      conversation_id: "",
+      conversationId: "",
     }),
 }));

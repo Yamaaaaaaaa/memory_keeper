@@ -1,43 +1,44 @@
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { useStoryEditingStore } from "@/store/storyEditingStore";
 import { screenRatio } from "@/utils/initScreen";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Step5_SelectColabType() {
     const router = useTrackedRouter()
-    const params = useLocalSearchParams()
+    const updateStory = useStoryEditingStore((state) => state.updateStory)
 
     return (
         <View style={styles.container}>
             <LinearGradient colors={["#FFDCD1", "#ECEBD0"]} style={styles.gradient} />
             <View style={styles.contentWrapper}>
                 <View style={styles.questionContainer}>
-                    <Text style={styles.questionText}>Call your plus one</Text>
+                    <Text style={styles.questionText}>Select Type Story</Text>
                 </View>
 
                 <View style={styles.optionsContainer}>
                     <TouchableOpacity style={styles.optionButton}
-                        onPress={() => router.push({
-                            pathname: "/story/new_story/step5_1_selectTypeCall",
-                            params: {
-                                previousQA: params.basicQA,
-                                storyTitle: params.storyTitle,
-                                shareType: params.shareType
-                            }
-                        })}>
+                        onPress={() => {
+                            updateStory({
+                                typeStory: "call",
+                            })
+                            router.push({
+                                pathname: "/story/new_story/step5_1_selectTypeCall",
+
+                            })
+                        }}>
                         <Text style={styles.optionText}>Call</Text>
                         <Image source={require("../../../assets/images/NewUI/voice-cricle.png")} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.optionButton} onPress={() => router.push({
-                        pathname: "/story/new_story/step5_2_selectPersonChat",
-                        params: {
-                            previousQA: params.basicQA,
-                            storyTitle: params.storyTitle,
-                            shareType: params.shareType
-                        }
-                    })} >
+                    <TouchableOpacity style={styles.optionButton} onPress={() => {
+                        router.push({
+                            pathname: "/story/new_story/step5_2_selectPersonChat",
+                        })
+                        updateStory({
+                            typeStory: "chat",
+                        })
+                    }}>
                         <Text style={styles.optionText}>Chat</Text>
                         <Image source={require("../../../assets/images/NewUI/videocall.png")} />
                     </TouchableOpacity>

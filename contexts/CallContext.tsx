@@ -1,6 +1,6 @@
 // 1. CallContext.tsx - Context để quản lý trạng thái call
 import { auth, db } from '@/firebase/firebaseConfig';
-import { useCallStoryStore } from '@/store/callStoryStore';
+import { useStoryEditingStore } from '@/store/storyEditingStore';
 import { Audio } from 'expo-av';
 import { Camera } from 'expo-camera';
 import { router } from 'expo-router';
@@ -91,7 +91,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const recordingRef = useRef<Audio.Recording | null>(null);
     const [isRecording, setIsRecording] = useState(false);
-    const [recordedUri, setRecordedUri] = useState<string | null>(null);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
     const localStreamRef = useRef<any>(null);
@@ -106,7 +105,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const myUserId = auth.currentUser?.uid || '';
 
-    const { hasStory, setId } = useCallStoryStore();
+    const updateStory = useStoryEditingStore((state) => state.updateStory)
+    const { id: storyId } = useStoryEditingStore.getState()
+
+
     // Request permissions
     useEffect(() => {
         (async () => {
@@ -346,35 +348,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             createdAt: serverTimestamp(),
         });
 
-        // Create story
-        try {
-            const storyRef = await addDoc(collection(db, 'stories'), {
+
+        // Update Call Id vào story
+        if (storyId) {
+            updateStory({
                 callId: callDoc.id,
-                ownerId: myUserId,
-                related_users: [myUserId, peerId],
-                title: '',
-                summaryStory: '',
-                thumbnail_url: '',
-                shareType: 'myself',
-                story_generated_date: new Date().toISOString(),
-                story_recited_date: '',
-                typeContact: 'call',
-                processing: 0,
-            });
-            console.log("✅ hasStory create story ", useCallStoryStore.getState().hasStory);
-
-            // Sau khi thêm doc thành công
-            if (hasStory) {
-                console.log('====================================');
-
-                console.log("setID");
-                console.log("storyRef.id", storyRef.id);
-                console.log('====================================');
-                setId(storyRef.id); // lưu id của stories vừa tạo vào Zustand
-            }
-        } catch (e) {
-            console.warn('create story error', e);
+            })
         }
+
 
         unsubCallSnapshot.current = onSnapshot(callDoc, async (snap) => {
             const data: any = snap.data();

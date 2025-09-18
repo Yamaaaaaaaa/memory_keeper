@@ -1,10 +1,9 @@
 import { useCall } from '@/contexts/CallContext';
 import { auth, db } from '@/firebase/firebaseConfig';
 import { useTrackedRouter } from '@/hooks/useTrackedRouter';
-import { useCallStoryStore } from '@/store/callStoryStore';
 import { screenRatio } from '@/utils/initScreen';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
@@ -29,8 +28,6 @@ export default function Step5_1_2_SelectPersonCall() {
     const [searchText, setSearchText] = useState<string>('');
     const router = useTrackedRouter();
     const { startCall, hasCam, hasMic } = useCall();
-    const params = useLocalSearchParams()
-    const { hasStory, id, initialQuestion, setHasStory, setInitQuestion } = useCallStoryStore();
 
     useFocusEffect(() => {
         const fetchFriends = async () => {
@@ -73,28 +70,8 @@ export default function Step5_1_2_SelectPersonCall() {
             Alert.alert('Lỗi', 'Cần cấp quyền truy cập Camera và Microphone');
             return;
         }
-        useCallStoryStore.getState().clearAll();
 
         try {
-            setHasStory(true);
-            // convert params.previousQA (string) -> object[]
-            const parsedQA = params.previousQA
-                ? JSON.parse(params.previousQA as string)
-                : []
-
-            setInitQuestion({
-                previousQA: parsedQA, // lúc này là mảng [{question, answer}, ...]
-                storyTitle: (params.storyTitle as string) || "Untitled Story",
-                shareType: (params.shareType as string) || "myself",
-            })
-
-            console.log('====================================');
-            console.log("Step5_1_2 Old params: ", params);
-            console.log("✅ New state: id ", useCallStoryStore.getState().id);
-            console.log("✅ New state: hasStory ", useCallStoryStore.getState().hasStory);
-
-            console.log('====================================');
-
             await startCall(friend.uid.trim());
             // Điều hướng đến màn hình gọi
             router.push('/(tabs)/call_screen');

@@ -1,7 +1,7 @@
 // 4. CallScreen.tsx - Call screen with full functionality
 import { useCall } from '@/contexts/CallContext';
-import { useCallStoryStore } from '@/store/callStoryStore';
-import { router } from 'expo-router';
+import { useTrackedRouter } from '@/hooks/useTrackedRouter';
+import { useStoryEditingStore } from '@/store/storyEditingStore';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RTCView } from 'react-native-webrtc';
@@ -20,29 +20,23 @@ const CallScreen: React.FC = () => {
         toggleSpeaker,
         endCall,
     } = useCall();
-    const { hasStory, id, initialQuestion, setHasStory, setInitQuestion } = useCallStoryStore();
+    const router = useTrackedRouter();
+    const { id: storyId } = useStoryEditingStore.getState()
 
     useEffect(() => {
-        console.log('====================================');
-        console.log("Callscreen Old");
-        console.log("id: ", id);
-        console.log("hasStory: ", hasStory);
-        console.log("initialQuestion: ", initialQuestion);
-        console.log('====================================');
-
-
         // Navigate back when the call ends
         if (callStatus === 'ended' || callStatus === 'declined') {
             console.log("endueffect");
-            if (hasStory) router.replace("/story/new_story/step6_generateScreen")
+            if (storyId) router.push("/story/new_story/step6_generateScreen")
             else router.replace("/(tabs)")
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentCallId, callStatus]);
 
     const handleEndCall = async () => {
         console.log("handleEndCall");
         await endCall();
-        if (hasStory) router.replace("/story/new_story/step6_generateScreen")
+        if (storyId) router.push("/story/new_story/step6_generateScreen")
         else router.replace("/(tabs)")
     };
 

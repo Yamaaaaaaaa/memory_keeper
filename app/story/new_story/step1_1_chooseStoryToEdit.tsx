@@ -23,7 +23,7 @@ interface Story {
     title: string
     processing: number
     ownerId: string
-    conversation_id?: string
+    conversationId?: string
 }
 
 export default function MyStoriesScreen() {
@@ -76,7 +76,7 @@ export default function MyStoriesScreen() {
                     title: data.title || "Untitled Story",
                     processing: data.processing || 0,
                     ownerId: data.ownerId || "",
-                    conversation_id: data.conversation_id,
+                    conversationId: data.conversationId,
                 }
                 storiesData.push(story)
             })
@@ -115,19 +115,19 @@ export default function MyStoriesScreen() {
             typeStory: data.typeStory ?? "chat",
             ownerId: data.ownerId ?? "",
             processing: data.processing ?? 0,
-            related_users: data.related_users ?? [],
+            relatedUsers: data.relatedUsers ?? [],
             shareType: data.shareType ?? "myself",
-            story_generated_date: data.story_generated_date
-                ? data.story_generated_date
+            storyGeneratedDate: data.storyGeneratedDate
+                ? data.storyGeneratedDate
                 : new Date().toISOString(),
-            story_recited_date: data.story_recited_date
-                ? data.story_recited_date
+            storyRecitedDate: data.storyRecitedDate
+                ? data.storyRecitedDate
                 : new Date().toISOString(),
-            detail_story: data.detail_story ?? "",
-            sumary_story: data.summaryStory ?? "",
+            detailStory: data.detailStory ?? "",
+            sumaryStory: data.summaryStory ?? "",
             title: data.title ?? "",
-            call_id: data.call_id ?? "",
-            conversation_id: data.conversation_id ?? "",
+            callId: data.callId ?? "",
+            conversationId: data.conversationId ?? "",
         }
         // 🔹 Load initQuestions subcollection
         const initQRef = collection(db, "stories", storyId, "initQuestions")
@@ -150,6 +150,7 @@ export default function MyStoriesScreen() {
             ...mapped,
             initQuestions,
         } as any)
+        console.log("useStoryEditingStore.getState(): ", useStoryEditingStore.getState());
 
         return { ...mapped, initQuestions }
     }
@@ -164,8 +165,8 @@ export default function MyStoriesScreen() {
             await deleteDoc(doc(db, "stories", story.id))
 
             // Delete related conversation if it exists
-            if (story.conversation_id) {
-                await deleteDoc(doc(db, "conversations", story.conversation_id))
+            if (story.conversationId) {
+                await deleteDoc(doc(db, "conversations", story.conversationId))
             }
 
             // Update UI

@@ -24,8 +24,8 @@ interface Message {
     id: string
     type: "question" | "answer" | "summary"
     content: string
-    timestamp: Date
-    speaker: string // 'bot' or user ID
+    timestamp: string   // luôn là ISO string
+    speaker: string     // 'bot' hoặc userId
 }
 
 export default function Step4_3_ChatWithAI() {
@@ -36,15 +36,15 @@ export default function Step4_3_ChatWithAI() {
         initQuestions,
         title,
         shareType: storeShareType,
-        setConversation,   // thêm từ store
+        setConversation,
     } = useStoryEditingStore()
 
     const [messages, setMessages] = useState<Message[]>([])
     const [currentAnswer, setCurrentAnswer] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false)
-    const [storyTitle, setStoryTitle] = useState(title || "Untitled Story")
-    const [shareType, setShareType] = useState(storeShareType || "")
+    const [storyTitle] = useState(title || "Untitled Story")
+    const [shareType] = useState(storeShareType || "")
 
     const currentUserId = auth.currentUser?.uid
 
@@ -61,7 +61,7 @@ export default function Step4_3_ChatWithAI() {
                     id: "summary",
                     type: "summary",
                     content: `Your story so far:\n\n${summaryContent}`,
-                    timestamp: new Date(),
+                    timestamp: new Date().toISOString(),
                     speaker: "bot",
                 }
                 initialMessages.push(summaryMessage)
@@ -71,9 +71,8 @@ export default function Step4_3_ChatWithAI() {
                 const firstQuestion: Message = {
                     id: "first-q",
                     type: "question",
-                    content:
-                        "Let's begin exploring your story. What would you like to tell me about?",
-                    timestamp: new Date(),
+                    content: "Let's begin exploring your story. What would you like to tell me about?",
+                    timestamp: new Date().toISOString(),
                     speaker: "bot",
                 }
                 setMessages([firstQuestion])
@@ -102,8 +101,7 @@ export default function Step4_3_ChatWithAI() {
 Story Title: "${storyTitle}"
 Sharing Context: ${shareType === "myself"
                         ? "User wants to tell this story to themselves"
-                        : "User wants to share this story with someone else"
-                    }
+                        : "User wants to share this story with someone else"}
 
 Context from their basic story information:
 ${contextInfo}
@@ -148,7 +146,7 @@ Your role:
                 id: `ai-q-${Date.now()}`,
                 type: "question",
                 content: aiQuestion,
-                timestamp: new Date(),
+                timestamp: new Date().toISOString(),
                 speaker: "bot",
             }
 
@@ -169,7 +167,7 @@ Your role:
                 id: `fallback-q-${Date.now()}`,
                 type: "question",
                 content: randomFallback,
-                timestamp: new Date(),
+                timestamp: new Date().toISOString(),
                 speaker: "bot",
             }
             setMessages((prev) => [...prev, fallbackQuestion])
@@ -186,7 +184,7 @@ Your role:
             id: `user-a-${Date.now()}`,
             type: "answer",
             content: currentAnswer.trim(),
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             speaker: currentUserId || "user",
         }
 
@@ -203,16 +201,12 @@ Your role:
     const handleContinue = () => {
         if (!messages.length) return
 
-        const convId = `conv-${Date.now()}`
         const conv = {
-            id: convId,
-            conversation_start_date: messages[0].timestamp.toISOString(),
-            participants: Array.from(
-                new Set(messages.map(m => m.speaker))
-            ),
+            conversationStartDate: messages[0].timestamp, // đã là string ISO
+            participants: Array.from(new Set(messages.map(m => m.speaker))),
             messages: messages.map(m => ({
                 id: m.id,
-                message_time: m.timestamp.toISOString(),
+                messageTime: m.timestamp, // string ISO luôn
                 speaker: m.speaker,
                 speech: m.content,
             })),
@@ -220,6 +214,7 @@ Your role:
 
         // lưu vào store
         setConversation(conv)
+        console.log("useStoryEditingStore.getState(): ", useStoryEditingStore.getState().conversation);
 
         // điều hướng sang step6
         router.push("/story/new_story/step6_generateScreen")

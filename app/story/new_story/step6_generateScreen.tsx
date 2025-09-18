@@ -1,101 +1,197 @@
-import { useTrackedRouter } from "@/hooks/useTrackedRouter"
-import { useCallStoryStore } from "@/store/callStoryStore"
-import { useStoryEditingStore } from "@/store/storyEditingStore"
-import { screenRatio } from "@/utils/initScreen"
-import { LinearGradient } from "expo-linear-gradient"
-import { useLocalSearchParams } from "expo-router"
-import React, { useEffect } from "react"
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { auth, db } from "@/firebase/firebaseConfig";
+import { useTrackedRouter } from "@/hooks/useTrackedRouter";
+import { useStoryEditingStore } from "@/store/storyEditingStore";
+import { screenRatio } from "@/utils/initScreen";
+import { LinearGradient } from "expo-linear-gradient";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import React from "react";
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Step6_Generate() {
-    const params = useLocalSearchParams()
-    const router = useTrackedRouter()
-    const { hasStory } = useCallStoryStore.getState();
-    const { conversation } = useStoryEditingStore.getState();
-    useEffect(() => {
-        // console.log("=== STEP6 GENERATE PARAMS ===")
-        // console.log("All params:", params)
-        // console.log("Story Title:", params.storyTitle)
-        // console.log("Share Type:", params.shareType)
-        // console.log("Total Questions:", params.totalQuestions)
-        // console.log("Basic Questions:", params.basicQuestions)
-        // console.log("Follow Up Questions:", params.followUpQuestions)
-        console.log('====================================');
-        console.log("conversation", conversation);
-        console.log('====================================');
-        if (params.finalQA) {
-            try {
-                const finalQA = JSON.parse(params.finalQA as string)
-                console.log("Final Q&A Array:", finalQA)
-                console.log("Number of Q&A pairs:", finalQA.length)
+    const router = useTrackedRouter();
 
-                finalQA.forEach((qa: any, index: number) => {
-                    console.log(`Q${index + 1}: ${qa.question}`)
-                    console.log(`A${index + 1}: ${qa.answer}`)
-                    console.log("---")
-                })
-            } catch (error) {
-                console.log("Error parsing finalQA:", error)
-            }
-        }
-        console.log("=== END PARAMS ===")
-    }, [params])
-
+    console.log('====================================');
+    console.log("useStoryEditingStore.getState()", useStoryEditingStore.getState());
+    console.log('====================================');
     const handleViewTranscript = () => {
-        console.log("View transcript clicked")
-        // You can implement transcript view here
-    }
+        console.log("View transcript clicked");
+        // TODO: show transcript modal
+    };
 
-    const handleSaveStory = () => {
-        console.log("Save story clicked")
-        // You can implement save story here
-    }
 
-    const handleGenerateStory = () => {
-        console.log("Generate story clicked")
-        if (hasStory) {
-            router.push({
-                pathname: "/story/new_story/step7_loadingGenerate",
-            })
+    const saveStoryToFirebase = async () => {
+        const story = useStoryEditingStore.getState();
+
+        try {
+            const storyRef = doc(db, "stories", story.id);
+
+            // Nếu typeStory = "chat" => lưu conversation
+            let conversationId = story.conversationId;
+            if (story.typeStory === "chat" && story.conversation) {
+                if (!conversationId) {
+                    // chưa có id => tạo mới
+                    const convRef = await addDoc(collection(db, "conversations"), {
+                        conversation_start_date: story.conversation.conversationStartDate,
+                        participants: story.conversation.participants,
+                    });
+                    conversationId = convRef.id;
+
+                    // lưu messages vào subcollection
+                    for (const msg of story.conversation.messages) {
+                        await setDoc(
+                            doc(collection(convRef, "messages")),
+                            {
+                                message_time: msg.messageTime,
+                                speaker: msg.speaker,
+                                speech: msg.speech,
+                            }
+                        );
+                    }
+                } else {
+                    // đã có conversationId, update lại conversation // Cái TH này dự phòng nao có làm thêm j đó thôi :>>
+                    const convRef = doc(db, "conversations", conversationId);
+                    await setDoc(convRef, {
+                        conversation_start_date: story.conversation.conversationStartDate,
+                        participants: story.conversation.participants,
+                    });
+
+                    // clear messages cũ
+                    const msgsSnap = await getDocs(collection(convRef, "messages"));
+                    for (const m of msgsSnap.docs) {
+                        await deleteDoc(m.ref);
+                    }
+
+                    // lưu lại messages mới
+                    for (const msg of story.conversation.messages) {
+                        await setDoc(
+                            doc(collection(convRef, "messages")),
+                            {
+                                message_time: msg.messageTime,
+                                speaker: msg.speaker,
+                                speech: msg.speech,
+                            }
+                        );
+                    }
+                }
+            }
+
+            // ===== cập nhật story chính =====
+            const storyData: any = {
+                typeStory: story.typeStory,
+                ownerId: auth.currentUser?.uid,
+                processing: story.processing,
+                relatedUsers: story.relatedUsers,
+                shareType: story.shareType,
+                storyGeneratedDate: story.storyGeneratedDate,
+                storyRecitedDate: story.storyRecitedDate,
+                detailStory: story.detailStory,
+                sumaryStory: story.sumaryStory,
+                title: story.title,
+            };
+
+            if (story.typeStory === "chat" && conversationId) {
+                storyData.conversationId = conversationId;
+            }
+            if (story.typeStory === "call" && story.callId) {
+                storyData.callId = story.callId;
+
+                // lấy callerId và calleeId trong calls/{callId}
+                const callRef = doc(db, "calls", story.callId);
+                const callSnap = await getDoc(callRef);
+                if (callSnap.exists()) {
+                    const callData = callSnap.data();
+                    const callerId = callData.callerId;
+                    const calleeId = callData.calleeId;
+
+                    storyData.relatedUsers = [callerId, calleeId];
+                }
+            }
+
+            await setDoc(storyRef, storyData);
+
+            // ===== initQuestions =====
+            const initQRef = collection(storyRef, "initQuestions");
+            // xóa cũ
+            const qsSnap = await getDocs(initQRef);
+            for (const q of qsSnap.docs) {
+                await deleteDoc(q.ref);
+            }
+            // thêm mới
+            for (const q of story.initQuestions) {
+                await setDoc(doc(initQRef), {
+                    question: q.question,
+                    answer: q.answer,
+                });
+            }
+
+            Alert.alert("Story saved to Firestore");
+        } catch (err) {
+            Alert.alert("❌ Error saving story:" + err);
         }
-        else router.push({
+    };
+    const handleSaveStory = async () => {
+        await saveStoryToFirebase()
+        router.replace({
+            pathname: "/(tabs)",
+        });
+    };
+
+    const handleGenerateStory = async () => {
+        await saveStoryToFirebase()
+        router.push({
             pathname: "/story/new_story/step7_loadingGenerate",
-            params: params
-        })
-    }
+        });
+    };
 
     return (
         <View style={styles.container}>
             <LinearGradient colors={["#353A3F", "#353A3F"]} style={styles.gradient} />
             <View style={styles.contentWrapper}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={styles.closeButton}
+                >
                     <Text style={styles.closeText}>✕</Text>
                 </TouchableOpacity>
 
                 <View style={styles.iconContainer}>
                     <View style={styles.glowCircle}>
-                        <Image source={require("../../../assets/images/NewUI/Group 70.png")} />
+                        <Image
+                            source={require("../../../assets/images/NewUI/Group 70.png")}
+                        />
                     </View>
                 </View>
+
                 <View style={styles.textContainer}>
                     <Text style={styles.mainText}>
-                        Generate a story from our conversation or save your in-progress story for another day.
+                        Generate a story from our conversation or save your in-progress
+                        story for another day.
                     </Text>
                 </View>
+
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.actionButton} onPress={handleViewTranscript}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={handleViewTranscript}
+                    >
                         <Text style={styles.actionButtonText}>View transcript</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} onPress={handleSaveStory}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={handleSaveStory}
+                    >
                         <Text style={styles.actionButtonText}>Save story</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} onPress={handleGenerateStory}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={handleGenerateStory}
+                    >
                         <Text style={styles.actionButtonText}>Generate story</Text>
                     </TouchableOpacity>
                 </View>
             </View>
         </View>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
@@ -121,24 +217,6 @@ const styles = StyleSheet.create({
         fontSize: screenRatio >= 2 ? 35 : 30,
         color: "#999",
     },
-    storyInfoContainer: {
-        alignItems: "center",
-        marginBottom: 20,
-    },
-    storyTitleText: {
-        color: "#FFFFFF",
-        fontSize: 20,
-        fontFamily: "Alberts",
-        textAlign: "center",
-        marginBottom: 8,
-        fontWeight: "600",
-    },
-    storyStatsText: {
-        color: "#CCCCCC",
-        fontSize: 14,
-        fontFamily: "Alberts",
-        textAlign: "center",
-    },
     iconContainer: {
         alignItems: "center",
         marginBottom: screenRatio >= 2 ? 40 : 20,
@@ -150,9 +228,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFD700",
         justifyContent: "center",
         alignItems: "center",
-    },
-    iconText: {
-        fontSize: 35,
     },
     textContainer: {
         justifyContent: "center",
@@ -182,15 +257,4 @@ const styles = StyleSheet.create({
         fontSize: screenRatio >= 2 ? 22 : 18,
         fontFamily: "Alberts",
     },
-    generateButton: {
-        backgroundColor: "#E5E5E5",
-        paddingVertical: 15,
-        borderRadius: 25,
-        alignItems: "center",
-    },
-    generateButtonText: {
-        color: "#333",
-        fontSize: 16,
-        fontWeight: "500",
-    },
-})
+});
