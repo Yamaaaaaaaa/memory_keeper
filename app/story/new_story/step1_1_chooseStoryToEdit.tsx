@@ -106,6 +106,7 @@ export default function MyStoriesScreen() {
             return null
         }
 
+        useStoryEditingStore.getState().clearStory();
 
         const data = docSnap.data() as any
         // map thẳng sang store

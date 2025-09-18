@@ -1,5 +1,5 @@
 import { useTrackedRouter } from "@/hooks/useTrackedRouter";
-import { useStoryEditingStore } from "@/store/storyEditingStore"; // ✅ import store
+import { useStoryEditingStore } from "@/store/storyEditingStore";
 import { screenRatio } from "@/utils/initScreen";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
